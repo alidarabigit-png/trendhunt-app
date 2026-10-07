@@ -1,0 +1,6 @@
+{
+  "name": "عمده‌یاب هوشمند تلگرام | TrendHunt B2B",
+  "description": "سامانه رصد خودکار کالاهای ترند عمده‌فروشی جهانی، ارزیابی تامین‌کنندگان، استخراج قیمت‌های پلکانی، ترجمه و سئو فارسی، همگام‌سازی گوگل شیت و کاتالوگ مینی‌آپ تلگرام",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
