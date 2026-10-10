@@ -268,7 +268,7 @@ def to_product(cand, g, images, usd_rate):
     sup = g.get("supplier") or {}
     cat = g.get("category") if g.get("category") in CATEGORIES else CATEGORIES[0]
     return {
-        "externalId": f"alibaba:{cand['id']}",
+        "externalId": cand.get("externalId") or f"alibaba:{cand['id']}",
         "sourceUrl": cand["url"],
         "originalTitle": g["originalTitle"],
         "faTitle": g["faTitle"],
@@ -379,6 +379,82 @@ def hunt(limit, known, usd_rate):
     return products
 
 
+# ------------------------------------------------------------- Queue mode
+IDEAS_PROMPT = """You are a sourcing analyst for an Iranian B2B wholesale importer of consumer gadgets
+(smart watches/rings, earbuds, chargers, power banks, mini projectors, smart home, trackers, car and travel gadgets).
+Suggest __N__ NEW product ideas that are trending right now for wholesale from China, as short English
+search keywords for the Alibaba.com search box (2-5 words, generic product type + key feature).
+Rules: no brand names (Apple, Samsung, Xiaomi, AirPods ...), no prices, no supplier names, no URLs.
+Do not repeat any of these already used keywords: __USED__
+Return ONLY JSON: {"ideas":[{"keyword":"...","note":"one short Persian line on why it is trending"}]}"""
+
+
+def gen_ideas(n=6):
+    """ایده (کلیدواژه) از Gemini؛ فقط ایده، نه قیمت و نه تأمین‌کننده"""
+    status = nfs("queue_status")
+    if status.get("ideas_pending", 0) >= 10:
+        log(f"صف ایده‌ها پر است ({status['ideas_pending']})؛ ایده‌ی جدید لازم نیست")
+        return 0
+    used = ", ".join(random.sample(QUERIES, min(8, len(QUERIES))))
+    prompt = IDEAS_PROMPT.replace("__N__", str(n)).replace("__USED__", used)
+    body = {"contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"}}
+    r = requests.post(
+        f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
+        headers={"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"}, json=body, timeout=120)
+    if r.status_code != 200:
+        raise SystemExit(f"Gemini HTTP {r.status_code}: {r.text[:200]}")
+    raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
+    raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
+    ideas = json.loads(raw).get("ideas", [])
+    ideas = [i for i in ideas if isinstance(i, dict) and i.get("keyword")]
+    res = nfs("queue_add_ideas", "POST", {"ideas": ideas})
+    log(f"ایده‌ی جدید در صف: {res.get('added')} از {len(ideas)}")
+    return res.get("added", 0)
+
+
+def raw_to_text(raw):
+    """متن خام استخراج‌شده توسط افزونه را برای Gemini آماده می‌کند"""
+    parts = [f"TITLE: {raw.get('title', '')}"]
+    if raw.get("priceRange"):
+        parts.append(f"PRICE RANGE (as shown): {raw['priceRange']}")
+    if raw.get("moq"):
+        parts.append(f"MOQ (as shown): {raw['moq']}")
+    if raw.get("description"):
+        parts.append("DESCRIPTION: " + raw["description"])
+    attrs = raw.get("attributes") or []
+    if attrs:
+        parts.append("ATTRIBUTES: " + " | ".join(f"{a['key']}: {a['value']}" for a in attrs))
+    if raw.get("fullText"):
+        parts.append("PAGE TEXT: " + raw["fullText"])
+    return "\n".join(parts)[:14000]
+
+
+def process_queue(limit, usd_rate):
+    data = nfs(f"queue_get_raw&limit={max(limit, 1)}")
+    items = data.get("items", [])
+    log(f"در صف پردازش: {data.get('pending_total', 0)} | این اجرا: {len(items)}")
+    products, ok_ids, bad = [], [], []
+    for raw in items:
+        log(f"محصول {raw['externalId']}")
+        if not raw["externalId"].startswith("alibaba:"):
+            bad.append((raw["id"], "منبع پشتیبانی‌نشده (۱۶۸۸ هنوز پشتیبانی نمی‌شود)"))
+            continue
+        cand = {"id": raw["externalId"].split(":", 1)[1], "url": raw["sourceUrl"],
+                "externalId": raw["externalId"]}
+        g = gemini_extract(raw["sourceUrl"], raw_to_text(raw))
+        prod, why = to_product(cand, g, raw.get("images") or [], usd_rate)
+        if not prod:
+            log(f"  رد شد: {why}")
+            bad.append((raw["id"], why))
+            continue
+        log(f"  OK: {prod['faTitle']}  ({len(prod['images'])} عکس، {len(prod['tieredPricing'])} پله قیمت)")
+        products.append(prod)
+        ok_ids.append(raw["id"])
+        time.sleep(2)
+    return products, ok_ids, bad
+
+
 # ------------------------------------------------------------------ Telegram
 def tg_post(public_product):
     caption = (
@@ -412,17 +488,33 @@ def main():
     ap.add_argument("--limit", type=int, default=MAX_PRODUCTS)
     ap.add_argument("--from-json", help="فایل JSON آماده‌ی محصولات (آرایه) برای ارسال بدون اسکرپ")
     ap.add_argument("--no-telegram", action="store_true")
+    ap.add_argument("--queue", action="store_true", help="پردازش محصولات خام ارسال‌شده توسط افزونه (بدون ScraperAPI)")
+    ap.add_argument("--gen-ideas", action="store_true", help="ساخت ایده‌ی جدید با Gemini و ذخیره در صف")
     args = ap.parse_args()
 
-    need = ["NFS_INGEST_KEY"] if args.from_json else ["NFS_INGEST_KEY", "SCRAPERAPI_KEY", "GEMINI_API_KEY"]
+    if args.queue or args.gen_ideas:
+        need = ["NFS_INGEST_KEY", "GEMINI_API_KEY"]
+    elif args.from_json:
+        need = ["NFS_INGEST_KEY"]
+    else:
+        need = ["NFS_INGEST_KEY", "SCRAPERAPI_KEY", "GEMINI_API_KEY"]
     missing = [k for k in need if not os.environ.get(k)]
     if missing:
         raise SystemExit("متغیرهای محیطی ناقص: " + ", ".join(missing))
 
+    if args.gen_ideas and not args.queue:
+        gen_ideas()
+        return
+
     usd_rate = get_usd_rate()
     log(f"نرخ دلار: {usd_rate:,.0f} تومان | حاشیه سود: {MARGIN}%")
 
-    if args.from_json:
+    queue_ok, queue_bad = [], []
+    if args.gen_ideas:
+        gen_ideas()
+    if args.queue:
+        products, queue_ok, queue_bad = process_queue(args.limit, usd_rate)
+    elif args.from_json:
         with open(args.from_json, encoding="utf-8") as f:
             products = json.load(f)
     else:
@@ -434,12 +526,18 @@ def main():
         print(json.dumps(products, ensure_ascii=False, indent=2)[:6000])
         log(f"dry-run: {len(products)} محصول آماده (ارسال نشد)")
         return
+    if args.queue:
+        for rid, why in queue_bad:
+            nfs("queue_resolve_raw", "POST", {"ids": [rid], "status": "failed", "reason": str(why)[:150]})
     if not products:
         log("محصول جدیدی برای ارسال نبود")
         return
 
     res = nfs("ingest_products", "POST", {"products": products, "cacheImages": True})
     log(f"ارسال به هاست: {res['added_count']} اضافه شد | رد شده: {res['skipped']}")
+    if args.queue and queue_ok:
+        # حتی تکراری‌ها هم «انجام‌شده» حساب می‌شوند تا صف گیر نکند
+        nfs("queue_resolve_raw", "POST", {"ids": queue_ok, "status": "done"})
     added_ids = res.get("added_ids", [])
     if not added_ids or args.no_telegram or not (BOT_TOKEN and CHANNEL_ID):
         if added_ids and not args.no_telegram:
