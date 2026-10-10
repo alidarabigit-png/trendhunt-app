@@ -2,20 +2,22 @@ name: Daily trend hunt
 
 on:
   schedule:
-    - cron: "30 3 * * *"        # ۰۷:۰۰ به وقت تهران (UTC+3:30)
+    - cron: "30 1 * * *"   # 05:00 تهران: ساخت ایده‌های جدید (Gemini)
+    - cron: "30 5 * * *"   # 09:00 تهران: ترجمه/سئو و انتشار محصولات ارسال‌شده توسط افزونه
   workflow_dispatch:
     inputs:
+      mode:
+        description: "ideas = ساخت ایده | queue = پردازش صف افزونه | search = جستجوی ScraperAPI (اعتبار می‌خورد)"
+        default: "queue"
+        type: choice
+        options: [ideas, queue, search]
       dry_run:
-        description: "فقط نمایش، بدون ذخیره و پست"
-        type: boolean
+        description: "فقط نمایش، بدون ارسال به هاست و کانال"
         default: true
+        type: boolean
       limit:
         description: "حداکثر تعداد محصول"
         default: "3"
-
-concurrency:
-  group: daily-hunt
-  cancel-in-progress: false
 
 jobs:
   hunt:
@@ -26,8 +28,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-          cache-dependency-path: scraper/requirements.txt
       - run: pip install -r scraper/requirements.txt
       - name: Run hunter
         env:
@@ -38,11 +38,21 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHANNEL_ID: ${{ vars.TELEGRAM_CHANNEL_ID || '@NafisSmartTrade' }}
           MINIAPP_LINK: ${{ vars.MINIAPP_LINK }}
+          SCHEDULE: ${{ github.event.schedule }}
+          MODE: ${{ github.event.inputs.mode }}
+          DRY: ${{ github.event.inputs.dry_run }}
+          LIMIT: ${{ github.event.inputs.limit }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            ARGS="--limit ${{ inputs.limit }}"
-            if [ "${{ inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "$SCHEDULE" = "30 1 * * *" ]; then
+            python scraper/hunt.py --gen-ideas
+          elif [ "$SCHEDULE" = "30 5 * * *" ]; then
+            python scraper/hunt.py --queue --limit 5
           else
-            ARGS=""
+            ARGS="--limit ${LIMIT:-3}"
+            if [ "$DRY" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+            case "$MODE" in
+              ideas) python scraper/hunt.py --gen-ideas ;;
+              search) python scraper/hunt.py $ARGS ;;
+              *) python scraper/hunt.py --queue $ARGS ;;
+            esac
           fi
-          python scraper/hunt.py $ARGS
