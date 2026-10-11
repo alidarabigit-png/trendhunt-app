@@ -164,12 +164,13 @@ prices, specs, certifications, warranties or supplier details. If something is n
 
 Return ONLY a JSON object with exactly these keys:
 {
- "usable": true|false,            // false if this is not a single physical consumer product, or no USD price is visible
+ "usable": true|false,            // false if this is not a single physical consumer product, or no price at all is visible on the page
  "brandRisk": true|false,         // true ONLY if the product itself is sold under a third-party brand name/logo (Apple, AirPods, Samsung, Xiaomi, Sony, Dyson, ...) or is described as clone/replica/1:1/copy.
                                   // Compatibility mentions ("for iPhone", "MagSafe compatible", "Find My", "Qi2", "Android/iOS") are NOT brand risk.
  "rejectReason": "short English reason if usable=false or brandRisk=true, otherwise null",
  "originalTitle": "string",
- "tiers": [{"minQuantity": int, "priceUsd": number}],   // real price tiers from the page, ascending by minQuantity
+ "currency": "ISO code of the currency the page shows prices in (USD, EUR, GBP, CNY, ...). Do NOT convert; copy prices exactly as shown.",
+ "tiers": [{"minQuantity": int, "price": number}],   // real price tiers from the page IN THAT CURRENCY, ascending by minQuantity. A single price or range "X-Y" => one tier with minQuantity = MOQ and price = lower value
  "moq": int|null,
  "soldCount": int|null,           // units sold / orders, only if shown
  "rating": number|null, "reviewCount": int|null,
@@ -228,11 +229,30 @@ def trend_score(g):
     return 0
 
 
-def build_tiers(tiers, usd_rate):
+_FX = {}
+
+
+def to_usd_factor(cur):
+    """نرخ تبدیل ارز نمایش‌داده‌شده به دلار (از open.er-api.com)؛ None اگر در دسترس نبود"""
+    cur = (cur or "USD").upper().strip()
+    if cur in ("USD", "US$", "$"):
+        return 1.0
+    if not _FX:
+        try:
+            r = requests.get("https://open.er-api.com/v6/latest/USD", timeout=20)
+            _FX.update(r.json().get("rates") or {})
+        except Exception as e:
+            log(f"  FX خطا: {e}")
+    rate = _FX.get(cur)
+    return (1.0 / rate) if rate else None
+
+
+def build_tiers(tiers, usd_rate, factor=1.0):
     clean = []
     for t in tiers or []:
         try:
-            q, p = int(t["minQuantity"]), float(t["priceUsd"])
+            q = int(t["minQuantity"])
+            p = float(t.get("price", t.get("priceUsd"))) * factor
         except (KeyError, TypeError, ValueError):
             continue
         if q >= 1 and p > 0:
@@ -264,9 +284,14 @@ def to_product(cand, g, images, usd_rate):
         return None, "brandRisk: " + str(g.get("rejectReason") or "—")[:120]
     if not g.get("usable"):
         return None, "unusable: " + str(g.get("rejectReason") or "—")[:120]
-    tiers = build_tiers(g.get("tiers"), usd_rate)
+    factor = to_usd_factor(g.get("currency"))
+    if factor is None:
+        return None, f"unknown currency {g.get('currency')}"
+    tiers = build_tiers(g.get("tiers"), usd_rate, factor)
     if not tiers:
         return None, "no price tiers"
+    if g.get("currency") and str(g["currency"]).upper() != "USD":
+        log(f"  قیمت از {g['currency']} به USD تبدیل شد (ضریب {factor:.4f})")
     if not (g.get("faTitle") and g.get("originalTitle")):
         return None, "missing title"
     if not images:
