@@ -199,12 +199,12 @@ def gemini_extract(url, text):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
     }
-    for attempt in range(5):
+    for attempt in range(4):
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
                 headers={"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"},
-                json=body, timeout=120)
+                json=body, timeout=75)
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
@@ -216,7 +216,7 @@ def gemini_extract(url, text):
             return None
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
             log(f"  Gemini خطا: {e}")
-            time.sleep(5)
+            time.sleep(10)
     return None
 
 
@@ -432,7 +432,7 @@ def gen_ideas(n=6):
             "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"}}
     r = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
-        headers={"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"}, json=body, timeout=120)
+        headers={"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"}, json=body, timeout=75)
     if r.status_code != 200:
         raise SystemExit(f"Gemini HTTP {r.status_code}: {r.text[:200]}")
     raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
