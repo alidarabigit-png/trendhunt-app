@@ -192,7 +192,11 @@ __TEXT__
 """
 
 
+QUOTA_HITS = 0   # تعداد دفعاتی که Gemini پشت‌سرهم سهمیه (429) تمام شده اعلام کرد
+
+
 def gemini_extract(url, text):
+    global QUOTA_HITS
     prompt = (PROMPT.replace("__CATEGORIES__", " | ".join(CATEGORIES))
               .replace("__URL__", url).replace("__TEXT__", text))
     body = {
@@ -208,9 +212,16 @@ def gemini_extract(url, text):
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
+                QUOTA_HITS = 0
                 return json.loads(raw)
             log(f"  Gemini HTTP {r.status_code}: {r.text[:200]}")
-            if r.status_code in (429, 500, 503):
+            if r.status_code == 429:
+                QUOTA_HITS += 1
+                if attempt >= 1:      # سهمیه تمام شده؛ تلاش‌های بیشتر فقط وقت می‌گیرد
+                    return None
+                time.sleep(40)
+                continue
+            if r.status_code in (500, 503):
                 time.sleep(15 * (attempt + 1))
                 continue
             return None
@@ -476,6 +487,9 @@ def process_queue(limit, usd_rate):
         txt = raw_to_text(raw)
         log(f"  عنوان: {raw.get('title', '')[:70]} | طول متن: {len(txt)} | قیمت نمایش‌داده‌شده: {raw.get('priceRange') or '—'}")
         g = gemini_extract(raw["sourceUrl"], txt)
+        if g is None and QUOTA_HITS >= 2:
+            log("  سهمیه‌ی Gemini تمام شده؛ اجرا متوقف شد (محصولات در صف می‌مانند). چند ساعت بعد یا فردا دوباره اجرا کنید.")
+            break
         prod, why = to_product(cand, g, raw.get("images") or [], usd_rate)
         if not prod:
             log(f"  رد شد: {why}")
