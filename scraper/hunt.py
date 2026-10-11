@@ -28,7 +28,7 @@ SITE = os.environ.get("NFS_SITE_URL", "https://nfs.nafisstore.com").rstrip("/")
 INGEST_KEY = os.environ.get("NFS_INGEST_KEY", "")
 SCRAPER_KEY = os.environ.get("SCRAPERAPI_KEY", "")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-3.8-flash")
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "")
 MINIAPP_LINK = os.environ.get("MINIAPP_LINK", "") or SITE
@@ -165,7 +165,9 @@ prices, specs, certifications, warranties or supplier details. If something is n
 Return ONLY a JSON object with exactly these keys:
 {
  "usable": true|false,            // false if this is not a single physical consumer product, or no USD price is visible
- "brandRisk": true|false,         // true if the listing uses third-party brand names/logos (Apple, AirPods, Samsung, Xiaomi, Sony, Dyson, ...) or says clone/replica/1:1/copy
+ "brandRisk": true|false,         // true ONLY if the product itself is sold under a third-party brand name/logo (Apple, AirPods, Samsung, Xiaomi, Sony, Dyson, ...) or is described as clone/replica/1:1/copy.
+                                  // Compatibility mentions ("for iPhone", "MagSafe compatible", "Find My", "Qi2", "Android/iOS") are NOT brand risk.
+ "rejectReason": "short English reason if usable=false or brandRisk=true, otherwise null",
  "originalTitle": "string",
  "tiers": [{"minQuantity": int, "priceUsd": number}],   // real price tiers from the page, ascending by minQuantity
  "moq": int|null,
@@ -196,7 +198,7 @@ def gemini_extract(url, text):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
     }
-    for attempt in range(3):
+    for attempt in range(5):
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
@@ -208,7 +210,7 @@ def gemini_extract(url, text):
                 return json.loads(raw)
             log(f"  Gemini HTTP {r.status_code}: {r.text[:200]}")
             if r.status_code in (429, 500, 503):
-                time.sleep(10 * (attempt + 1))
+                time.sleep(15 * (attempt + 1))
                 continue
             return None
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
@@ -256,8 +258,12 @@ def build_tiers(tiers, usd_rate):
 
 def to_product(cand, g, images, usd_rate):
     """خروجی Gemini را به فرمت ingest_products تبدیل می‌کند؛ اگر نامعتبر بود None"""
-    if not g or not g.get("usable") or g.get("brandRisk"):
-        return None, "unusable/brandRisk"
+    if not g:
+        return None, "gemini-error"
+    if g.get("brandRisk"):
+        return None, "brandRisk: " + str(g.get("rejectReason") or "—")[:120]
+    if not g.get("usable"):
+        return None, "unusable: " + str(g.get("rejectReason") or "—")[:120]
     tiers = build_tiers(g.get("tiers"), usd_rate)
     if not tiers:
         return None, "no price tiers"
@@ -442,11 +448,14 @@ def process_queue(limit, usd_rate):
             continue
         cand = {"id": raw["externalId"].split(":", 1)[1], "url": raw["sourceUrl"],
                 "externalId": raw["externalId"]}
-        g = gemini_extract(raw["sourceUrl"], raw_to_text(raw))
+        txt = raw_to_text(raw)
+        log(f"  عنوان: {raw.get('title', '')[:70]} | طول متن: {len(txt)} | قیمت نمایش‌داده‌شده: {raw.get('priceRange') or '—'}")
+        g = gemini_extract(raw["sourceUrl"], txt)
         prod, why = to_product(cand, g, raw.get("images") or [], usd_rate)
         if not prod:
             log(f"  رد شد: {why}")
-            bad.append((raw["id"], why))
+            if why != "gemini-error":   # خطای موقت Gemini: در صف می‌ماند و بار بعد دوباره تلاش می‌شود
+                bad.append((raw["id"], why))
             continue
         log(f"  OK: {prod['faTitle']}  ({len(prod['images'])} عکس، {len(prod['tieredPricing'])} پله قیمت)")
         products.append(prod)
