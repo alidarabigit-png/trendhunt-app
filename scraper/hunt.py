@@ -27,7 +27,10 @@ from bs4 import BeautifulSoup
 SITE = os.environ.get("NFS_SITE_URL", "https://nfs.nafisstore.com").rstrip("/")
 INGEST_KEY = os.environ.get("NFS_INGEST_KEY", "")
 SCRAPER_KEY = os.environ.get("SCRAPERAPI_KEY", "")
-GEMINI_KEY = os.environ.get("GEMINI_API_KEY", "")
+GEMINI_KEYS = [k.strip() for k in os.environ.get("GEMINI_API_KEY", "").replace("\n", ",").split(",") if k.strip()]
+GEMINI_KEY = GEMINI_KEYS[0] if GEMINI_KEYS else ""
+_KEY_IDX = 0
+_EXHAUSTED = set()   # کلیدهایی که سهمیه‌شان تمام شده
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "")
@@ -195,8 +198,19 @@ __TEXT__
 QUOTA_HITS = 0   # تعداد دفعاتی که Gemini پشت‌سرهم سهمیه (429) تمام شده اعلام کرد
 
 
+def _next_key():
+    """کلید بعدی که سهمیه‌اش تمام نشده؛ None اگر همه تمام شده‌اند"""
+    global _KEY_IDX
+    for i in range(len(GEMINI_KEYS)):
+        j = (_KEY_IDX + i) % len(GEMINI_KEYS)
+        if j not in _EXHAUSTED:
+            _KEY_IDX = j
+            return GEMINI_KEYS[j]
+    return None
+
+
 def gemini_extract(url, text):
-    global QUOTA_HITS
+    global QUOTA_HITS, _KEY_IDX
     prompt = (PROMPT.replace("__CATEGORIES__", " | ".join(CATEGORIES))
               .replace("__URL__", url).replace("__TEXT__", text))
     body = {
@@ -209,10 +223,14 @@ def gemini_extract(url, text):
         if not models:
             return None
         model = models[attempt % len(models)]
+        key = _next_key()
+        if key is None:
+            QUOTA_HITS = 2
+            return None
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                headers={"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"},
+                headers={"x-goog-api-key": key, "Content-Type": "application/json"},
                 json=body, timeout=75)
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -224,6 +242,10 @@ def gemini_extract(url, text):
                 models.remove(model)      # مدل جایگزین نامعتبر است؛ کنار گذاشته می‌شود
                 continue
             if r.status_code == 429:
+                if len(GEMINI_KEYS) > 1:
+                    _EXHAUSTED.add(_KEY_IDX)
+                    log(f"  سهمیه‌ی کلید شماره {_KEY_IDX + 1} تمام شد؛ رفتن به کلید بعدی")
+                    continue
                 QUOTA_HITS += 1
                 if attempt >= 1:      # سهمیه تمام شده؛ تلاش‌های بیشتر فقط وقت می‌گیرد
                     return None
@@ -365,6 +387,9 @@ def nfs(path, method="GET", json_body=None, timeout=120):
 
 def get_usd_rate():
     r = requests.get(f"{SITE}/api.php?action=get_rates", timeout=30).json()
+    if str(r.get("source", "")).startswith("default"):
+        raise SystemExit("نرخ دلار روی هاست تنظیم نشده (مقدار پیش‌فرض)؛ برای جلوگیری از قیمت‌گذاری غلط اجرا متوقف شد")
+    log(f"  منبع نرخ دلار: {r.get('source')} | آخرین به‌روزرسانی: {r.get('lastUpdated')}")
     if not r.get("isLive"):
         log("  هشدار: نرخ دلار زنده نیست، از آخرین نرخ ذخیره‌شده استفاده می‌شود")
     return float(r["usd"])
@@ -451,7 +476,7 @@ def gen_ideas(n=6):
             "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"}}
     r = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
-        headers={"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"}, json=body, timeout=75)
+        headers={"x-goog-api-key": (_next_key() or GEMINI_KEY), "Content-Type": "application/json"}, json=body, timeout=75)
     if r.status_code != 200:
         raise SystemExit(f"Gemini HTTP {r.status_code}: {r.text[:200]}")
     raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
