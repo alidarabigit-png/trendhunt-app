@@ -29,8 +29,6 @@ INGEST_KEY = os.environ.get("NFS_INGEST_KEY", "")
 SCRAPER_KEY = os.environ.get("SCRAPERAPI_KEY", "")
 GEMINI_KEYS = [k.strip() for k in os.environ.get("GEMINI_API_KEY", "").replace("\n", ",").split(",") if k.strip()]
 GEMINI_KEY = GEMINI_KEYS[0] if GEMINI_KEYS else ""
-_KEY_IDX = 0
-_EXHAUSTED = set()   # کلیدهایی که سهمیه‌شان تمام شده
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "")
@@ -195,47 +193,41 @@ __TEXT__
 """
 
 QUOTA_HITS = 0   # تعداد دفعاتی که سهمیه قطعی تمام شده است
+_EXH = set()     # ترکیب‌های (شماره کلید، مدل) که سهمیه‌ی روزانه‌شان تمام شده؛ سهمیه برای هر مدل جداست
 
 
-def _next_key():
-    """کلید بعدی که سهمیه‌اش تمام نشده؛ None اگر همه تمام شده‌اند"""
-    global _KEY_IDX
-    for i in range(len(GEMINI_KEYS)):
-        j = (_KEY_IDX + i) % len(GEMINI_KEYS)
-        if j not in _EXHAUSTED:
-            _KEY_IDX = j
-            return GEMINI_KEYS[j]
-    return None
+def _models():
+    fb = os.environ.get("GEMINI_FALLBACK_MODELS", "gemini-flash-latest")
+    return [GEMINI_MODEL] + [m.strip() for m in fb.split(",") if m.strip() and m.strip() != GEMINI_MODEL]
+
+
+def _combos(skip):
+    """ترکیب‌های (کلید، مدل) قابل استفاده؛ اول مدل اصلی روی همه‌ی کلیدها، بعد مدل‌های جایگزین"""
+    return [(ki, m) for m in _models() for ki in range(len(GEMINI_KEYS))
+            if (ki, m) not in _EXH and (ki, m) not in skip]
 
 
 def gemini_extract(url, text):
-    global QUOTA_HITS, _KEY_IDX
+    global QUOTA_HITS
     prompt = (PROMPT.replace("__CATEGORIES__", " | ".join(CATEGORIES))
               .replace("__URL__", url).replace("__TEXT__", text))
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
     }
-
-    fallback_raw = os.environ.get("GEMINI_FALLBACK_MODELS", "gemini-flash-latest")
-    models = [GEMINI_MODEL] + [m.strip() for m in fallback_raw.split(",") if m.strip() and m.strip() != GEMINI_MODEL]
-
-    for attempt in range(8):
-        if not models:
+    skip = set()      # ترکیب‌هایی که در همین محصول خطای موقت دادند
+    for attempt in range(10):
+        avail = _combos(skip)
+        if not avail:
+            if all((ki, m) in _EXH for m in _models() for ki in range(len(GEMINI_KEYS))):
+                QUOTA_HITS = 2
             return None
-        model = models[attempt % len(models)]
-        key = _next_key()
-        if key is None:
-            QUOTA_HITS = 2
-            return None
-
+        ki, model = avail[0]
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
-                headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-                json=body,
-                timeout=75
-            )
+                headers={"x-goog-api-key": GEMINI_KEYS[ki], "Content-Type": "application/json"},
+                json=body, timeout=75)
 
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -243,51 +235,36 @@ def gemini_extract(url, text):
                 QUOTA_HITS = 0
                 return json.loads(raw)
 
-            log(f"  Gemini[{model}] HTTP {r.status_code}: {r.text[:200]}")
+            log(f"  Gemini[{model}#{ki + 1}] HTTP {r.status_code}: {r.text[:160]}")
 
-            # مدل منسوخ یا نامعتبر (404 یا 400) -> حذف از چرخه
-            if r.status_code in (400, 404):
-                if model in models:
-                    models.remove(model)
+            if r.status_code in (400, 404):          # مدل نامعتبر برای این کلید
+                _EXH.add((ki, model))
                 continue
-
-            # ترافیک مقطعی سرور گوگل (503) -> ۵ ثانیه مکث و تلاش دوباره
-            if r.status_code in (500, 503):
-                time.sleep(5)
+            if r.status_code in (500, 503):           # شلوغی گوگل: ترکیب بعدی، با کمی مکث
+                skip.add((ki, model))
+                time.sleep(3)
                 continue
-
-            # محدودیت درخواست (429)
             if r.status_code == 429:
-                err_text = r.text.lower()
-                # پیام واقعی گوگل معمولاً quotaId مثل ...PerDay... دارد، نه کلمه‌ی «daily»
-                daily = any(x in err_text for x in ("perday", "per day", "daily", "limit per day"))
-                m = re.search(r"retry in ([\d.]+)s", err_text)
-                if m and float(m.group(1)) > 90:      # زمان انتظار طولانی یعنی سقف روزانه
+                t = r.text.lower()
+                daily = any(x in t for x in ("perday", "per day", "daily"))
+                m = re.search(r"retry in ([\d.]+)s", t)
+                if m and float(m.group(1)) > 90:
                     daily = True
                 if daily:
-                    if len(GEMINI_KEYS) > 1:
-                        _EXHAUSTED.add(_KEY_IDX)
-                        log(f"  سهمیه‌ی روزانه کلید شماره {_KEY_IDX + 1} تمام شد؛ تغییر به کلید بعدی")
-                        continue
-                    QUOTA_HITS += 1
-                    return None
-                # سقف دقیقه (RPM): با چند کلید، فوراً کلید بعدی؛ وگرنه ۲۰ ثانیه صبر
-                if len(GEMINI_KEYS) - len(_EXHAUSTED) > 1:
-                    _KEY_IDX = (_KEY_IDX + 1) % len(GEMINI_KEYS)
-                    if attempt % len(GEMINI_KEYS) == len(GEMINI_KEYS) - 1:
+                    _EXH.add((ki, model))
+                    log(f"  سهمیه‌ی روزانه‌ی «{model}» برای کلید {ki + 1} تمام شد")
+                else:
+                    skip.add((ki, model))             # سقف دقیقه: ترکیب بعدی
+                    if len(avail) <= 1:
                         log("  محدودیت نرخ دقیقه (RPM)؛ ۲۰ ثانیه توقف...")
                         time.sleep(20)
-                    continue
-                log("  محدودیت نرخ دقیقه (RPM)؛ ۲۰ ثانیه توقف...")
-                time.sleep(20)
+                        skip.clear()
                 continue
-
             return None
-
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
-            log(f"  Gemini[{model}] خطا: {e}")
-            time.sleep(4)
-
+            log(f"  Gemini[{model}#{ki + 1}] خطا: {e}")
+            skip.add((ki, model))
+            time.sleep(3)
     return None
 
 
@@ -506,7 +483,7 @@ def gen_ideas(n=6):
             "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"}}
     r = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
-        headers={"x-goog-api-key": (_next_key() or GEMINI_KEY), "Content-Type": "application/json"}, json=body, timeout=75)
+        headers={"x-goog-api-key": (GEMINI_KEYS[(_combos(set()) or [(0, "")])[0][0]] if GEMINI_KEYS else ""), "Content-Type": "application/json"}, json=body, timeout=75)
     if r.status_code != 200:
         raise SystemExit(f"Gemini HTTP {r.status_code}: {r.text[:200]}")
     raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
