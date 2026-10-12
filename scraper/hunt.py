@@ -112,7 +112,7 @@ IMG_RE = re.compile(r'(?:https?:)?//[a-z0-9.\-]*alicdn\.com/[^"\'\s<>\\)]+?\.(?:
 def _clean_img(u):
     if u.startswith("//"):
         u = "https:" + u
-    # حذف پسوند اندازه، مثل  ...jpg_80x80.jpg  ->  ...jpg
+    # حذف پسوند اندازه، مثل ...jpg_80x80.jpg -> ...jpg
     return re.sub(r"(\.(?:jpg|jpeg|png|webp))_[^/]*$", r"\1", u, flags=re.I)
 
 
@@ -194,8 +194,7 @@ SOURCE URL: __URL__
 __TEXT__
 """
 
-
-QUOTA_HITS = 0   # تعداد دفعاتی که Gemini پشت‌سرهم سهمیه (429) تمام شده اعلام کرد
+QUOTA_HITS = 0   # تعداد دفعاتی که سهمیه قطعی تمام شده است
 
 
 def _next_key():
@@ -217,9 +216,11 @@ def gemini_extract(url, text):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
     }
-    models = [GEMINI_MODEL] + [m.strip() for m in os.environ.get(
-        "GEMINI_FALLBACK_MODELS", "gemini-2.5-flash,gemini-flash-latest").split(",") if m.strip() and m.strip() != GEMINI_MODEL]
-    for attempt in range(5):
+
+    fallback_raw = os.environ.get("GEMINI_FALLBACK_MODELS", "gemini-flash-latest")
+    models = [GEMINI_MODEL] + [m.strip() for m in fallback_raw.split(",") if m.strip() and m.strip() != GEMINI_MODEL]
+
+    for attempt in range(8):
         if not models:
             return None
         model = models[attempt % len(models)]
@@ -227,37 +228,57 @@ def gemini_extract(url, text):
         if key is None:
             QUOTA_HITS = 2
             return None
+
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 headers={"x-goog-api-key": key, "Content-Type": "application/json"},
-                json=body, timeout=75)
+                json=body,
+                timeout=75
+            )
+
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
                 QUOTA_HITS = 0
                 return json.loads(raw)
+
             log(f"  Gemini[{model}] HTTP {r.status_code}: {r.text[:200]}")
-            if r.status_code in (400, 404) and model != GEMINI_MODEL:
-                models.remove(model)      # مدل جایگزین نامعتبر است؛ کنار گذاشته می‌شود
+
+            # مدل منسوخ یا نامعتبر (404 یا 400) -> حذف از چرخه
+            if r.status_code in (400, 404):
+                if model in models:
+                    models.remove(model)
                 continue
-            if r.status_code == 429:
-                if len(GEMINI_KEYS) > 1:
-                    _EXHAUSTED.add(_KEY_IDX)
-                    log(f"  سهمیه‌ی کلید شماره {_KEY_IDX + 1} تمام شد؛ رفتن به کلید بعدی")
-                    continue
-                QUOTA_HITS += 1
-                if attempt >= 1:      # سهمیه تمام شده؛ تلاش‌های بیشتر فقط وقت می‌گیرد
-                    return None
-                time.sleep(40)
-                continue
+
+            # ترافیک مقطعی سرور گوگل (503) -> ۵ ثانیه مکث و تلاش دوباره
             if r.status_code in (500, 503):
-                time.sleep(5 * (attempt + 1))   # مدل بعدی امتحان می‌شود
+                time.sleep(5)
                 continue
+
+            # محدودیت درخواست (429)
+            if r.status_code == 429:
+                err_text = r.text.lower()
+                if "daily" in err_text or "limit per day" in err_text:
+                    if len(GEMINI_KEYS) > 1:
+                        _EXHAUSTED.add(_KEY_IDX)
+                        log(f"  سهمیه‌ی روزانه کلید شماره {_KEY_IDX + 1} تمام شد؛ تغییر به کلید بعدی")
+                        continue
+                    else:
+                        QUOTA_HITS += 1
+                        return None
+                else:
+                    # پر شدن سقف دقیقه (RPM) -> ۲۰ ثانیه تاخیر برای ریست شدن پنجره
+                    log("  محدودیت نرخ دقیقه (RPM)؛ ۲۰ ثانیه توقف...")
+                    time.sleep(20)
+                    continue
+
             return None
+
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
             log(f"  Gemini[{model}] خطا: {e}")
-            time.sleep(5)
+            time.sleep(4)
+
     return None
 
 
@@ -449,7 +470,7 @@ def hunt(limit, known, usd_rate):
             continue
         log(f"  OK: {prod['faTitle']}  ({len(images)} عکس، {len(prod['tieredPricing'])} پله قیمت)")
         products.append(prod)
-        time.sleep(2)
+        time.sleep(5)
     log(f"اعتبار ScraperAPI مصرف‌شده (تقریبی): {_credits_used}")
     return products
 
@@ -526,13 +547,13 @@ def process_queue(limit, usd_rate):
         prod, why = to_product(cand, g, raw.get("images") or [], usd_rate)
         if not prod:
             log(f"  رد شد: {why}")
-            if why != "gemini-error":   # خطای موقت Gemini: در صف می‌ماند و بار بعد دوباره تلاش می‌شود
+            if why != "gemini-error":   # خطای موقت Gemini: در صف می‌ماند تا اجرای بعد
                 bad.append((raw["id"], why))
             continue
         log(f"  OK: {prod['faTitle']}  ({len(prod['images'])} عکس، {len(prod['tieredPricing'])} پله قیمت)")
         products.append(prod)
         ok_ids.append(raw["id"])
-        time.sleep(2)
+        time.sleep(5)
     return products, ok_ids, bad
 
 
@@ -626,7 +647,6 @@ def main():
     res = nfs("ingest_products", "POST", {"products": products, "cacheImages": True})
     log(f"ارسال به هاست: {res['added_count']} اضافه شد | رد شده: {res['skipped']}")
     if args.queue and queue_ok:
-        # حتی تکراری‌ها هم «انجام‌شده» حساب می‌شوند تا صف گیر نکند
         nfs("queue_resolve_raw", "POST", {"ids": queue_ok, "status": "done"})
     added_ids = res.get("added_ids", [])
     if not added_ids or args.no_telegram or not (BOT_TOKEN and CHANNEL_ID):
