@@ -203,10 +203,15 @@ def gemini_extract(url, text):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
     }
-    for attempt in range(4):
+    models = [GEMINI_MODEL] + [m.strip() for m in os.environ.get(
+        "GEMINI_FALLBACK_MODELS", "gemini-2.5-flash,gemini-flash-latest").split(",") if m.strip() and m.strip() != GEMINI_MODEL]
+    for attempt in range(5):
+        if not models:
+            return None
+        model = models[attempt % len(models)]
         try:
             r = requests.post(
-                f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
+                f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 headers={"x-goog-api-key": GEMINI_KEY, "Content-Type": "application/json"},
                 json=body, timeout=75)
             if r.status_code == 200:
@@ -214,7 +219,10 @@ def gemini_extract(url, text):
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
                 QUOTA_HITS = 0
                 return json.loads(raw)
-            log(f"  Gemini HTTP {r.status_code}: {r.text[:200]}")
+            log(f"  Gemini[{model}] HTTP {r.status_code}: {r.text[:200]}")
+            if r.status_code in (400, 404) and model != GEMINI_MODEL:
+                models.remove(model)      # مدل جایگزین نامعتبر است؛ کنار گذاشته می‌شود
+                continue
             if r.status_code == 429:
                 QUOTA_HITS += 1
                 if attempt >= 1:      # سهمیه تمام شده؛ تلاش‌های بیشتر فقط وقت می‌گیرد
@@ -222,12 +230,12 @@ def gemini_extract(url, text):
                 time.sleep(40)
                 continue
             if r.status_code in (500, 503):
-                time.sleep(15 * (attempt + 1))
+                time.sleep(5 * (attempt + 1))   # مدل بعدی امتحان می‌شود
                 continue
             return None
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
-            log(f"  Gemini خطا: {e}")
-            time.sleep(10)
+            log(f"  Gemini[{model}] خطا: {e}")
+            time.sleep(5)
     return None
 
 
