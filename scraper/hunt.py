@@ -32,7 +32,7 @@ GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "")
 MINIAPP_LINK = os.environ.get("MINIAPP_LINK", "") or SITE
-MARGIN = float(os.environ.get("MARGIN_PERCENT", "45"))
+MARGIN = float(os.environ.get("MARGIN_PERCENT", "50"))
 QUERIES_PER_RUN = int(os.environ.get("QUERIES_PER_RUN", "2"))
 MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "5"))
 # سقف تقریبی اعتبار ScraperAPI در هر اجرا (صفحه با render=true حدود ۱۰ اعتبار می‌خورد)
@@ -555,6 +555,15 @@ def main():
         return
 
     usd_rate = get_usd_rate()
+    global MARGIN
+    try:
+        cfg = requests.get(f"{SITE}/api.php?action=get_pricing_config",
+                           headers={"X-Ingest-Key": INGEST_KEY}, timeout=30).json()
+        if cfg.get("success") and cfg.get("marginPercent") is not None:
+            MARGIN = float(cfg["marginPercent"])
+            log("حاشیه سود از تنظیمات پنل خوانده شد")
+    except Exception as e:
+        log(f"  خواندن حاشیه سود از هاست ممکن نشد، از مقدار پیش‌فرض استفاده می‌شود: {e}")
     log(f"نرخ دلار: {usd_rate:,.0f} تومان | حاشیه سود: {MARGIN}%")
 
     queue_ok, queue_bad = [], []
