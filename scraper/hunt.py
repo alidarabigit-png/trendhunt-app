@@ -259,19 +259,28 @@ def gemini_extract(url, text):
             # محدودیت درخواست (429)
             if r.status_code == 429:
                 err_text = r.text.lower()
-                if "daily" in err_text or "limit per day" in err_text:
+                # پیام واقعی گوگل معمولاً quotaId مثل ...PerDay... دارد، نه کلمه‌ی «daily»
+                daily = any(x in err_text for x in ("perday", "per day", "daily", "limit per day"))
+                m = re.search(r"retry in ([\d.]+)s", err_text)
+                if m and float(m.group(1)) > 90:      # زمان انتظار طولانی یعنی سقف روزانه
+                    daily = True
+                if daily:
                     if len(GEMINI_KEYS) > 1:
                         _EXHAUSTED.add(_KEY_IDX)
                         log(f"  سهمیه‌ی روزانه کلید شماره {_KEY_IDX + 1} تمام شد؛ تغییر به کلید بعدی")
                         continue
-                    else:
-                        QUOTA_HITS += 1
-                        return None
-                else:
-                    # پر شدن سقف دقیقه (RPM) -> ۲۰ ثانیه تاخیر برای ریست شدن پنجره
-                    log("  محدودیت نرخ دقیقه (RPM)؛ ۲۰ ثانیه توقف...")
-                    time.sleep(20)
+                    QUOTA_HITS += 1
+                    return None
+                # سقف دقیقه (RPM): با چند کلید، فوراً کلید بعدی؛ وگرنه ۲۰ ثانیه صبر
+                if len(GEMINI_KEYS) - len(_EXHAUSTED) > 1:
+                    _KEY_IDX = (_KEY_IDX + 1) % len(GEMINI_KEYS)
+                    if attempt % len(GEMINI_KEYS) == len(GEMINI_KEYS) - 1:
+                        log("  محدودیت نرخ دقیقه (RPM)؛ ۲۰ ثانیه توقف...")
+                        time.sleep(20)
                     continue
+                log("  محدودیت نرخ دقیقه (RPM)؛ ۲۰ ثانیه توقف...")
+                time.sleep(20)
+                continue
 
             return None
 
