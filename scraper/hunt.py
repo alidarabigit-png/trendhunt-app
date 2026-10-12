@@ -160,7 +160,7 @@ def page_text(html, limit=14000):
 
 # -------------------------------------------------------------------- Gemini
 PROMPT = """You are a product data extractor and Persian e-commerce copywriter for an Iranian B2B wholesale catalog.
-Below is the text of ONE Alibaba.com product page (English). Extract facts ONLY from this text. Never invent
+Below is the text of ONE wholesale product page from __SITE__ (the text may be English or Chinese; translate to Persian). Extract facts ONLY from this text. Never invent
 prices, specs, certifications, warranties or supplier details. If something is not in the text, use null / [] / {}.
 
 Return ONLY a JSON object with exactly these keys:
@@ -170,7 +170,7 @@ Return ONLY a JSON object with exactly these keys:
                                   // Compatibility mentions ("for iPhone", "MagSafe compatible", "Find My", "Qi2", "Android/iOS") are NOT brand risk.
  "rejectReason": "short English reason if usable=false or brandRisk=true, otherwise null",
  "originalTitle": "string",
- "currency": "ISO code of the currency the page shows prices in (USD, EUR, GBP, CNY, ...). Do NOT convert; copy prices exactly as shown.",
+ "currency": "ISO code of the currency the page shows prices in (USD, EUR, GBP, CNY, ...). Do NOT convert; copy prices exactly as shown. On 1688.com the symbol ¥/￥/元 always means CNY.",
  "tiers": [{"minQuantity": int, "price": number}],   // real price tiers from the page IN THAT CURRENCY, ascending by minQuantity. A single price or range "X-Y" => one tier with minQuantity = MOQ and price = lower value
  "moq": int|null,
  "soldCount": int|null,           // units sold / orders, only if shown
@@ -186,7 +186,9 @@ Return ONLY a JSON object with exactly these keys:
  "tags": ["up to 8 Persian keywords"]
 }
 Persian rules: modern, fluent Persian; keep model numbers/Latin technical terms as is; use Persian punctuation;
-do not mention Alibaba or the supplier name inside faTitle/faShortDesc/faFullDesc.
+do not mention Alibaba, 1688, Made-in-China or the supplier name inside faTitle/faShortDesc/faFullDesc.
+
+Chinese-page hints: 起批量/起订量 = MOQ; "≥N件 ¥X" = tier from N pieces at price X; 成交/已售 = sold count; 诚信通/实力商家 = verified supplier. Supplier country for 1688 is China.
 
 SOURCE URL: __URL__
 __TEXT__
@@ -207,10 +209,10 @@ def _combos(skip):
             if (ki, m) not in _EXH and (ki, m) not in skip]
 
 
-def gemini_extract(url, text):
+def gemini_extract(url, text, site_name="Alibaba.com"):
     global QUOTA_HITS
     prompt = (PROMPT.replace("__CATEGORIES__", " | ".join(CATEGORIES))
-              .replace("__URL__", url).replace("__TEXT__", text))
+              .replace("__SITE__", site_name).replace("__URL__", url).replace("__TEXT__", text))
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
@@ -366,7 +368,7 @@ def to_product(cand, g, images, usd_rate):
         "trendScore": trend_score(g),
         "supplier": {
             "name": sup.get("name") or "",
-            "platform": "Alibaba.com",
+            "platform": cand.get("platform") or "Alibaba.com",
             "country": sup.get("country") or "",
             "city": sup.get("city") or "",
             "yearsInBusiness": int(sup.get("yearsInBusiness") or 0),
@@ -462,13 +464,17 @@ def hunt(limit, known, usd_rate):
 
 
 # ------------------------------------------------------------- Queue mode
+# پیشوند externalId ← نام پلتفرم (باید با افزونه و api.php هماهنگ باشد)
+SITES = {"alibaba": "Alibaba.com", "1688": "1688.com", "mic": "Made-in-China.com"}
+
 IDEAS_PROMPT = """You are a sourcing analyst for an Iranian B2B wholesale importer of consumer gadgets
 (smart watches/rings, earbuds, chargers, power banks, mini projectors, smart home, trackers, car and travel gadgets).
 Suggest __N__ NEW product ideas that are trending right now for wholesale from China, as short English
 search keywords for the Alibaba.com search box (2-5 words, generic product type + key feature).
 Rules: no brand names (Apple, Samsung, Xiaomi, AirPods ...), no prices, no supplier names, no URLs.
 Do not repeat any of these already used keywords: __USED__
-Return ONLY JSON: {"ideas":[{"keyword":"...","note":"one short Persian line on why it is trending"}]}"""
+For each idea also give "keywordZh": the same product as a natural Simplified-Chinese search phrase for 1688.com (2-8 characters).
+Return ONLY JSON: {"ideas":[{"keyword":"...","keywordZh":"...","note":"one short Persian line on why it is trending"}]}"""
 
 
 def gen_ideas(n=6):
@@ -519,14 +525,15 @@ def process_queue(limit, usd_rate):
     products, ok_ids, bad = [], [], []
     for raw in items:
         log(f"محصول {raw['externalId']}")
-        if not raw["externalId"].startswith("alibaba:"):
-            bad.append((raw["id"], "منبع پشتیبانی‌نشده (۱۶۸۸ هنوز پشتیبانی نمی‌شود)"))
+        prefix = raw["externalId"].split(":", 1)[0]
+        if prefix not in SITES:
+            bad.append((raw["id"], f"منبع پشتیبانی‌نشده ({prefix})"))
             continue
         cand = {"id": raw["externalId"].split(":", 1)[1], "url": raw["sourceUrl"],
-                "externalId": raw["externalId"]}
+                "externalId": raw["externalId"], "platform": SITES[prefix]}
         txt = raw_to_text(raw)
         log(f"  عنوان: {raw.get('title', '')[:70]} | طول متن: {len(txt)} | قیمت نمایش‌داده‌شده: {raw.get('priceRange') or '—'}")
-        g = gemini_extract(raw["sourceUrl"], txt)
+        g = gemini_extract(raw["sourceUrl"], txt, SITES[prefix])
         if g is None and QUOTA_HITS >= 2:
             log("  سهمیه‌ی Gemini تمام شده؛ اجرا متوقف شد (محصولات در صف می‌مانند). چند ساعت بعد یا فردا دوباره اجرا کنید.")
             break
