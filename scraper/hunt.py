@@ -218,18 +218,37 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
     }
     skip = set()      # ترکیب‌هایی که در همین محصول خطای موقت دادند
+    mfail = {}        # شمار خطای موقت (شلوغی/تایم‌اوت) به‌ازای هر مدل؛ شلوغی مدل به کلید ربطی ندارد
+    waited = False
+
+    def _transient(ki, model):
+        skip.add((ki, model))
+        mfail[model] = mfail.get(model, 0) + 1
+        if mfail[model] >= 2:     # دو خطای پشت‌سرهم یعنی خود مدل شلوغ است؛ بقیه‌ی کلیدها را روی آن امتحان نکن
+            for k2 in range(len(GEMINI_KEYS)):
+                skip.add((k2, model))
+        time.sleep(3)
+
     for attempt in range(10):
         avail = _combos(skip)
         if not avail:
             if all((ki, m) in _EXH for m in _models() for ki in range(len(GEMINI_KEYS))):
                 QUOTA_HITS = 2
+                return None
+            if not waited:            # همه‌ی مدل‌ها شلوغ‌اند: یک بار صبر و تلاش دوباره
+                waited = True
+                log("  همه‌ی مدل‌ها شلوغ‌اند؛ ۳۰ ثانیه صبر و تلاش دوباره...")
+                time.sleep(30)
+                skip.clear()
+                mfail.clear()
+                continue
             return None
         ki, model = avail[0]
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 headers={"x-goog-api-key": GEMINI_KEYS[ki], "Content-Type": "application/json"},
-                json=body, timeout=75)
+                json=body, timeout=50)
 
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -242,9 +261,8 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
             if r.status_code in (400, 404):          # مدل نامعتبر برای این کلید
                 _EXH.add((ki, model))
                 continue
-            if r.status_code in (500, 503):           # شلوغی گوگل: ترکیب بعدی، با کمی مکث
-                skip.add((ki, model))
-                time.sleep(3)
+            if r.status_code in (500, 503):           # شلوغی گوگل
+                _transient(ki, model)
                 continue
             if r.status_code == 429:
                 t = r.text.lower()
@@ -265,8 +283,7 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
             return None
         except (requests.RequestException, KeyError, IndexError, ValueError) as e:
             log(f"  Gemini[{model}#{ki + 1}] خطا: {e}")
-            skip.add((ki, model))
-            time.sleep(3)
+            _transient(ki, model)
     return None
 
 
