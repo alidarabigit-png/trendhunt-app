@@ -18,6 +18,11 @@ on:
       limit:
         description: "حداکثر تعداد محصول"
         default: "3"
+      source:
+        description: "فقط در حالت queue: منبع محصولات (all = همه)"
+        default: "all"
+        type: choice
+        options: [all, alibaba, "1688", mic]
 
 jobs:
   hunt:
@@ -42,6 +47,7 @@ jobs:
           MODE: ${{ github.event.inputs.mode }}
           DRY: ${{ github.event.inputs.dry_run }}
           LIMIT: ${{ github.event.inputs.limit }}
+          SOURCE: ${{ github.event.inputs.source }}
         run: |
           if [ "$SCHEDULE" = "30 1 * * *" ]; then
             python scraper/hunt.py --gen-ideas
@@ -49,10 +55,12 @@ jobs:
             python scraper/hunt.py --queue --limit 5
           else
             ARGS="--limit ${LIMIT:-3}"
+            SRC=""
+            if [ -n "$SOURCE" ] && [ "$SOURCE" != "all" ]; then SRC="--source $SOURCE"; fi
             if [ "$DRY" = "true" ]; then ARGS="$ARGS --dry-run"; fi
             case "$MODE" in
               ideas) python scraper/hunt.py --gen-ideas ;;
               search) python scraper/hunt.py $ARGS ;;
-              *) python scraper/hunt.py --queue $ARGS ;;
+              *) python scraper/hunt.py --queue $ARGS $SRC ;;
             esac
           fi
