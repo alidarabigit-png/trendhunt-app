@@ -518,8 +518,8 @@ def raw_to_text(raw):
     return "\n".join(parts)[:14000]
 
 
-def process_queue(limit, usd_rate):
-    data = nfs(f"queue_get_raw&limit={max(limit, 1)}")
+def process_queue(limit, usd_rate, source=""):
+    data = nfs(f"queue_get_raw&limit={max(limit, 1)}" + (f"&prefix={source}" if source else ""))
     items = data.get("items", [])
     log(f"در صف پردازش: {data.get('pending_total', 0)} | این اجرا: {len(items)}")
     products, ok_ids, bad = [], [], []
@@ -584,6 +584,7 @@ def main():
     ap.add_argument("--from-json", help="فایل JSON آماده‌ی محصولات (آرایه) برای ارسال بدون اسکرپ")
     ap.add_argument("--no-telegram", action="store_true")
     ap.add_argument("--queue", action="store_true", help="پردازش محصولات خام ارسال‌شده توسط افزونه (بدون ScraperAPI)")
+    ap.add_argument("--source", default="", help="فقط محصولات صف از این منبع: alibaba | 1688 | mic (خالی = همه)")
     ap.add_argument("--gen-ideas", action="store_true", help="ساخت ایده‌ی جدید با Gemini و ذخیره در صف")
     args = ap.parse_args()
 
@@ -617,7 +618,7 @@ def main():
     if args.gen_ideas:
         gen_ideas()
     if args.queue:
-        products, queue_ok, queue_bad = process_queue(args.limit, usd_rate)
+        products, queue_ok, queue_bad = process_queue(args.limit, usd_rate, args.source.strip().lower())
     elif args.from_json:
         with open(args.from_json, encoding="utf-8") as f:
             products = json.load(f)
