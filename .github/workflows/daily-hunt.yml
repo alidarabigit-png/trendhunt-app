@@ -3,7 +3,7 @@ name: Daily trend hunt
 on:
   schedule:
     - cron: "30 1 * * *"   # 05:00 تهران: ساخت ایده‌های جدید (Gemini)
-    - cron: "30 5 * * *"   # 09:00 تهران: ترجمه/سئو و انتشار محصولات ارسال‌شده توسط افزونه
+    - cron: "0 8 * * *"    # ۱۱:۳۰ تهران (بعد از ریست سهمیه‌ی Gemini): ترجمه/سئو و انتشار
   workflow_dispatch:
     inputs:
       mode:
@@ -51,7 +51,7 @@ jobs:
         run: |
           if [ "$SCHEDULE" = "30 1 * * *" ]; then
             python scraper/hunt.py --gen-ideas
-          elif [ "$SCHEDULE" = "30 5 * * *" ]; then
+          elif [ "$SCHEDULE" = "0 8 * * *" ]; then
             python scraper/hunt.py --queue --limit 5
           else
             ARGS="--limit ${LIMIT:-3}"
