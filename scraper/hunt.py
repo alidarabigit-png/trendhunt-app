@@ -28,11 +28,11 @@ SITE = os.environ.get("NFS_SITE_URL", "https://nfs.nafisstore.com").rstrip("/")
 INGEST_KEY = os.environ.get("NFS_INGEST_KEY", "")
 SCRAPER_KEY = os.environ.get("SCRAPERAPI_KEY", "")
 
-# کلیدها و مدل‌های بهینه‌سازی‌شده برای جلوگیری از 503 و 429
+# کلیدها و مدل‌های رسمی و فعال گوگل در اندپوینت v1beta
 GEMINI_KEYS = [k.strip() for k in os.environ.get("GEMINI_API_KEY", "").replace("\n", ",").split(",") if k.strip()]
 GEMINI_KEY = GEMINI_KEYS[0] if GEMINI_KEYS else ""
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
-GEMINI_FALLBACK_DEFAULT = "gemini-1.5-flash"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-2.0-flash"
+GEMINI_FALLBACK_DEFAULT = "gemini-2.0-flash-lite"
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "")
@@ -160,46 +160,35 @@ def page_text(html, limit=14000):
 
 # -------------------------------------------------------------------- Gemini
 PROMPT = """You are a product data extractor and Persian e-commerce copywriter for an Iranian B2B wholesale catalog.
-Below is the text of ONE wholesale product page from __SITE__ (the text may be English or Chinese; translate to Persian). 
-Extract facts ONLY from this text. Never invent prices, specs, certifications, warranties, or supplier details. 
-If something is not in the text, use null / [] / {}.
+Below is the text of ONE wholesale product page from __SITE__ (the text may be English or Chinese; translate to Persian). Extract facts ONLY from this text. Never invent
+prices, specs, certifications, warranties or supplier details. If something is not in the text, use null / [] / {}.
 
 Return ONLY a JSON object with exactly these keys:
 {
-  "usable": true|false,
-  "brandRisk": true|false,
-  "rejectReason": "short English reason if usable=false or brandRisk=true, otherwise null",
-  "originalTitle": "string",
-  "currency": "ISO code of the currency the page shows prices in (USD, EUR, GBP, CNY, ...). Do NOT convert; copy prices exactly as shown. On 1688.com the symbol ¥/￥/元 always means CNY.",
-  "tiers": [{"minQuantity": int, "price": number}],
-  "moq": int|null,
-  "soldCount": int|null,
-  "rating": number|null,
-  "reviewCount": int|null,
-  "supplier": {
-    "name": "string|null", 
-    "country": "string|null", 
-    "city": "string|null", 
-    "yearsInBusiness": int|null,
-    "isVerified": bool, 
-    "hasTradeAssurance": bool
-  },
-  "faTitle": "Persian SEO title, max 70 chars, product type + main feature, natural Persian",
-  "faShortDesc": "Persian, max 160 chars, optimized for meta description",
-  "faFullDesc": "Persian, 120-220 words, 2-3 short paragraphs, factual, B2B wholesale tone, no unverifiable claims",
-  "faFeatures": ["5-8 short Persian bullet points taken from the page specs"],
-  "technicalSpecs": {"Persian label": "value with units"},
-  "category": "one of: __CATEGORIES__",
-  "tags": ["up to 8 high-intent Persian wholesale search keywords"]
+ "usable": true|false,            // false if this is not a single physical consumer product, or no price at all is visible on the page
+ "brandRisk": true|false,         // true ONLY if the product itself is sold under a third-party brand name/logo (Apple, AirPods, Samsung, Xiaomi, Sony, Dyson, ...) or is described as clone/replica/1:1/copy.
+                                  // Compatibility mentions ("for iPhone", "MagSafe compatible", "Find My", "Qi2", "Android/iOS") are NOT brand risk.
+ "rejectReason": "short English reason if usable=false or brandRisk=true, otherwise null",
+ "originalTitle": "string",
+ "currency": "ISO code of the currency the page shows prices in (USD, EUR, GBP, CNY, ...). Do NOT convert; copy prices exactly as shown. On 1688.com the symbol ¥/￥/元 always means CNY.",
+ "tiers": [{"minQuantity": int, "price": number}],   // real price tiers from the page IN THAT CURRENCY, ascending by minQuantity. A single price or range "X-Y" or "X~Y" => one tier with minQuantity = MOQ and price = lower value
+ "moq": int|null,
+ "soldCount": int|null,           // units sold / orders, only if shown
+ "rating": number|null, "reviewCount": int|null,
+ "supplier": {"name": "string|null", "country": "string|null", "city": "string|null", "yearsInBusiness": int|null,
+              "isVerified": bool, "hasTradeAssurance": bool},
+ "faTitle": "Persian SEO title, max 70 chars, product type + main feature, natural Persian",
+ "faShortDesc": "Persian, max 160 chars",
+ "faFullDesc": "Persian, 120-220 words, 2-3 short paragraphs, factual, no hype, no unverifiable claims",
+ "faFeatures": ["5-8 short Persian bullet points taken from the page"],
+ "technicalSpecs": {"Persian label": "value with units"},    // max 12 items, only real specs from the page
+ "category": "one of: __CATEGORIES__",
+ "tags": ["up to 8 Persian keywords"]
 }
+Persian rules: modern, fluent Persian; keep model numbers/Latin technical terms as is; use Persian punctuation;
+do not mention Alibaba, 1688, Made-in-China or the supplier name inside faTitle/faShortDesc/faFullDesc.
 
-STRICT INSTRUCTIONS:
-- Pricing & Tiers: Parse "X-Y" or "X~Y" as a single tier with price=lower value and minQuantity=MOQ. Remove Chinese unit counters (e.g. 个, 件, 套).
-- Brand Risk: Set brandRisk=true ONLY if the product is sold under an unauthorized brand name/logo (Apple, AirPods, Xiaomi, Samsung, Sony, Dyson) or marked as clone/copy/replica/1:1. Compatibility terms ("for iPhone", "MagSafe compatible", "Find My", "Qi2", "Tuya", "Android/iOS") are NOT brand risk.
-- category MUST strictly match one entry from: __CATEGORIES__.
-- Modern, fluent, commercial Persian. Keep model numbers and Latin technical units (W, mAh, mm, dB, V) intact. Do NOT mention Alibaba, 1688, or the supplier name inside faTitle, faShortDesc, or faFullDesc.
-
-Chinese-page hints: 起批量/起订量 = MOQ; "≥N件 ¥X" = tier from N pieces at price X; 成交/已售 = sold count; 诚信通/实力商家 = verified supplier. Supplier country for 1688 is always China.
+Chinese-page hints: 起批量/起订量 = MOQ; "≥N件 ¥X" = tier from N pieces at price X; 成交/已售 = sold count; 诚信通/实力商家 = verified supplier. Supplier country for 1688 is China.
 
 SOURCE URL: __URL__
 __TEXT__
@@ -261,14 +250,14 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 headers={"x-goog-api-key": GEMINI_KEYS[ki], "Content-Type": "application/json"},
                 json=body,
-                timeout=90  # افزایش مهلت به ۹۰ ثانیه برای رفع خطای Read timed out
+                timeout=90
             )
 
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
                 QUOTA_HITS = 0
-                time.sleep(4)  # فاصله ۴ ثانیه‌ای برای حفظ سقف RPM
+                time.sleep(4)  # فاصله ۴ ثانیه‌ای بین محصولات برای مهار سقف RPM
                 return json.loads(raw)
 
             log(f"  Gemini[{model}#{ki + 1}] HTTP {r.status_code}: {r.text[:160]}")
@@ -277,8 +266,7 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
                 _EXH.add((ki, model))
                 continue
             if r.status_code in (500, 503):
-                # خطای شلوغی کلاستر با وقفه تصاعدی
-                wait_sec = (2 ** min(attempt, 3)) * 4 + random.uniform(1, 4)
+                wait_sec = (2 ** min(attempt, 3)) * 4 + random.uniform(2, 5)
                 log(f"  شلوغی موقت سرور؛ وقفه {wait_sec:.1f} ثانیه‌ای...")
                 time.sleep(wait_sec)
                 _transient(ki, model)
@@ -502,29 +490,25 @@ IDEAS_PROMPT = """You are a sourcing analyst for an Iranian B2B wholesale import
 (smart watches/rings, earbuds, chargers, power banks, mini projectors, smart home, trackers, car and travel gadgets).
 Suggest __N__ NEW product ideas that are trending right now for wholesale from China, as short English
 search keywords for the Alibaba.com search box (2-5 words, generic product type + key feature).
-
-Rules:
-- No brand names (Apple, Samsung, Xiaomi, AirPods, Anker, Baseus, etc.).
-- No spy/covert cameras, no jamming/surveillance gear, no drones/quadcopters.
-- No prices, no supplier names, no URLs.
-- Do not repeat any of these already used keywords: __USED__
-- For each idea, provide "keywordZh": the same product as a natural Simplified-Chinese search phrase for 1688.com (2-8 characters).
-
-Return ONLY JSON:
-{"ideas":[{"keyword":"...","keywordZh":"...","note":"one short Persian line on why it is trending"}]}"""
+Rules: no brand names (Apple, Samsung, Xiaomi, AirPods ...), no prices, no supplier names, no URLs.
+Do not repeat any of these already used keywords: __USED__
+For each idea also give "keywordZh": the same product as a natural Simplified-Chinese search phrase for 1688.com (2-8 characters).
+Return ONLY JSON: {"ideas":[{"keyword":"...","keywordZh":"...","note":"one short Persian line on why it is trending"}]}"""
 
 
 def gen_ideas(n=6):
+    """ایده (کلیدواژه) از Gemini با دمای 0.9"""
     status = nfs("queue_status")
     if status.get("ideas_pending", 0) >= 10:
         log(f"صف ایده‌ها پر است ({status['ideas_pending']})؛ ایده‌ی جدید لازم نیست")
         return 0
     used = ", ".join(random.sample(QUERIES, min(8, len(QUERIES))))
     prompt = IDEAS_PROMPT.replace("__N__", str(n)).replace("__USED__", used)
-    body = {"contents": [{"parts": [{"text": prompt}]}],
-            "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"}}
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"}
+    }
     
-    # چرخش هوشمند کلیدها برای ایده‌یابی
     active_key = GEMINI_KEYS[(_combos(set()) or [(0, "")])[0][0]] if GEMINI_KEYS else ""
     r = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
@@ -544,6 +528,7 @@ def gen_ideas(n=6):
 
 
 def raw_to_text(raw):
+    """متن خام استخراج‌شده توسط افزونه را دقیقاً با الگوی استاندارد __TEXT__ آماده می‌کند"""
     parts = [f"TITLE: {raw.get('title', '')}"]
     if raw.get("priceRange"):
         parts.append(f"PRICE RANGE (as shown): {raw['priceRange']}")
@@ -555,7 +540,9 @@ def raw_to_text(raw):
     if attrs:
         parts.append("ATTRIBUTES: " + " | ".join(f"{a['key']}: {a['value']}" for a in attrs))
     if raw.get("fullText"):
-        parts.append("PAGE TEXT: " + raw["fullText"])
+        # محدودسازی دقیق بخش متن صفحه به سقف ۱۲,۰۰۰ کاراکتر
+        parts.append("PAGE TEXT: " + raw["fullText"][:12000])
+    # سقف نهایی کل متن تزریق‌شده: ۱۴,۰۰۰ کاراکتر
     return "\n".join(parts)[:14000]
 
 
