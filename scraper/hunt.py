@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
 شکارچی روزانه NFS
-Alibaba (از طریق ScraperAPI) -> Gemini (استخراج + ترجمه و سئوی فارسی)
+Alibaba / 1688 (از طریق افزونه یا ScraperAPI) -> Gemini (استخراج + ترجمه و سئوی فارسی)
 -> api.php?action=ingest_products -> پست کانال تلگرام
 
 اجرا:
   python scraper/hunt.py --dry-run --limit 2     # فقط نمایش، بدون ذخیره و بدون پست
   python scraper/hunt.py                          # اجرای کامل
   python scraper/hunt.py --from-json file.json    # فقط ارسال محصولات آماده (برای تست)
+  python scraper/hunt.py --queue                  # پردازش صف محصولات استخراج‌شده با افزونه
+  python scraper/hunt.py --gen-ideas              # ایده‌یابی ترند ساعت 05:00
 
 همه کلیدها فقط از متغیرهای محیطی (GitHub Secrets) خوانده می‌شوند.
 """
@@ -28,7 +30,7 @@ SITE = os.environ.get("NFS_SITE_URL", "https://nfs.nafisstore.com").rstrip("/")
 INGEST_KEY = os.environ.get("NFS_INGEST_KEY", "")
 SCRAPER_KEY = os.environ.get("SCRAPERAPI_KEY", "")
 
-# کلیدها و مدل‌های رسمی و فعال گوگل در اندپوینت v1beta
+# کلیدها و مدل‌های رسمی و پایدار گوگل در اندپوینت v1beta
 GEMINI_KEYS = [k.strip() for k in os.environ.get("GEMINI_API_KEY", "").replace("\n", ",").split(",") if k.strip()]
 GEMINI_KEY = GEMINI_KEYS[0] if GEMINI_KEYS else ""
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-2.0-flash"
@@ -257,7 +259,7 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
                 QUOTA_HITS = 0
-                time.sleep(4)  # فاصله ۴ ثانیه‌ای بین محصولات برای مهار سقف RPM
+                time.sleep(4)  # وقفه ۴ ثانیه‌ای برای رعایت سقف درخواست در دقیقه (RPM)
                 return json.loads(raw)
 
             log(f"  Gemini[{model}#{ki + 1}] HTTP {r.status_code}: {r.text[:160]}")
@@ -497,7 +499,7 @@ Return ONLY JSON: {"ideas":[{"keyword":"...","keywordZh":"...","note":"one short
 
 
 def gen_ideas(n=6):
-    """ایده (کلیدواژه) از Gemini با دمای 0.9"""
+    """ایده‌یابی ترند ساعت 05:00 با دمای 0.9"""
     status = nfs("queue_status")
     if status.get("ideas_pending", 0) >= 10:
         log(f"صف ایده‌ها پر است ({status['ideas_pending']})؛ ایده‌ی جدید لازم نیست")
@@ -528,7 +530,10 @@ def gen_ideas(n=6):
 
 
 def raw_to_text(raw):
-    """متن خام استخراج‌شده توسط افزونه را دقیقاً با الگوی استاندارد __TEXT__ آماده می‌کند"""
+    """
+    متن خام استخراج‌شده توسط افزونه را دقیقاً با ساختار استاندارد بخش ۲ پرامپت آماده می‌کند:
+    PAGE TEXT حداکثر ۱۲,۰۰۰ کاراکتر و کل خروجی حداکثر ۱۴,۰۰۰ کاراکتر
+    """
     parts = [f"TITLE: {raw.get('title', '')}"]
     if raw.get("priceRange"):
         parts.append(f"PRICE RANGE (as shown): {raw['priceRange']}")
@@ -540,9 +545,7 @@ def raw_to_text(raw):
     if attrs:
         parts.append("ATTRIBUTES: " + " | ".join(f"{a['key']}: {a['value']}" for a in attrs))
     if raw.get("fullText"):
-        # محدودسازی دقیق بخش متن صفحه به سقف ۱۲,۰۰۰ کاراکتر
         parts.append("PAGE TEXT: " + raw["fullText"][:12000])
-    # سقف نهایی کل متن تزریق‌شده: ۱۴,۰۰۰ کاراکتر
     return "\n".join(parts)[:14000]
 
 
