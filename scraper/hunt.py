@@ -30,11 +30,11 @@ SITE = os.environ.get("NFS_SITE_URL", "https://nfs.nafisstore.com").rstrip("/")
 INGEST_KEY = os.environ.get("NFS_INGEST_KEY", "")
 SCRAPER_KEY = os.environ.get("SCRAPERAPI_KEY", "")
 
-# کلیدها و مدل‌های رسمی و پایدار گوگل در اندپوینت v1beta
+# کلیدها و مدل‌های مورد تایید رسمی سرور گوگل بر اساس پیام مستقیم API
 GEMINI_KEYS = [k.strip() for k in os.environ.get("GEMINI_API_KEY", "").replace("\n", ",").split(",") if k.strip()]
 GEMINI_KEY = GEMINI_KEYS[0] if GEMINI_KEYS else ""
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-2.0-flash"
-GEMINI_FALLBACK_DEFAULT = "gemini-2.0-flash-lite"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
+GEMINI_FALLBACK_DEFAULT = "gemini-3.5-flash"
 
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "")
@@ -238,7 +238,7 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
                 return None
             if not waited:
                 waited = True
-                backoff_time = (2 ** (attempt % 4)) * 6 + random.uniform(3, 8)
+                backoff_time = (2 ** (attempt % 3)) * 8 + random.uniform(5, 10)
                 log(f"  همه‌ی مدل‌ها موقتاً شلوغ‌اند؛ {backoff_time:.1f} ثانیه شکیبایی هوشمند...")
                 time.sleep(backoff_time)
                 skip.clear()
@@ -259,7 +259,7 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
                 QUOTA_HITS = 0
-                time.sleep(4)  # وقفه ۴ ثانیه‌ای برای رعایت سقف درخواست در دقیقه (RPM)
+                time.sleep(4)  # فاصله ایمن ۴ ثانیه‌ای بین محصولات برای مهار خطای سهمیه دقیقه
                 return json.loads(raw)
 
             log(f"  Gemini[{model}#{ki + 1}] HTTP {r.status_code}: {r.text[:160]}")
@@ -268,8 +268,8 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
                 _EXH.add((ki, model))
                 continue
             if r.status_code in (500, 503):
-                wait_sec = (2 ** min(attempt, 3)) * 4 + random.uniform(2, 5)
-                log(f"  شلوغی موقت سرور؛ وقفه {wait_sec:.1f} ثانیه‌ای...")
+                wait_sec = (2 ** min(attempt, 3)) * 5 + random.uniform(3, 6)
+                log(f"  شلوغی موقت کلاستر گوگل (503)؛ وقفه {wait_sec:.1f} ثانیه‌ای...")
                 time.sleep(wait_sec)
                 _transient(ki, model)
                 continue
@@ -499,7 +499,7 @@ Return ONLY JSON: {"ideas":[{"keyword":"...","keywordZh":"...","note":"one short
 
 
 def gen_ideas(n=6):
-    """ایده‌یابی ترند ساعت 05:00 با دمای 0.9"""
+    """ایده‌یابی ترند با دمای 0.9"""
     status = nfs("queue_status")
     if status.get("ideas_pending", 0) >= 10:
         log(f"صف ایده‌ها پر است ({status['ideas_pending']})؛ ایده‌ی جدید لازم نیست")
@@ -530,10 +530,7 @@ def gen_ideas(n=6):
 
 
 def raw_to_text(raw):
-    """
-    متن خام استخراج‌شده توسط افزونه را دقیقاً با ساختار استاندارد بخش ۲ پرامپت آماده می‌کند:
-    PAGE TEXT حداکثر ۱۲,۰۰۰ کاراکتر و کل خروجی حداکثر ۱۴,۰۰۰ کاراکتر
-    """
+    """متن خام استخراج‌شده توسط افزونه را دقیقاً با الگوی استاندارد __TEXT__ آماده می‌کند"""
     parts = [f"TITLE: {raw.get('title', '')}"]
     if raw.get("priceRange"):
         parts.append(f"PRICE RANGE (as shown): {raw['priceRange']}")
