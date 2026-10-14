@@ -27,19 +27,21 @@ from bs4 import BeautifulSoup
 SITE = os.environ.get("NFS_SITE_URL", "https://nfs.nafisstore.com").rstrip("/")
 INGEST_KEY = os.environ.get("NFS_INGEST_KEY", "")
 SCRAPER_KEY = os.environ.get("SCRAPERAPI_KEY", "")
+
+# کلیدها و مدل‌های بهینه‌سازی‌شده برای جلوگیری از 503 و 429
 GEMINI_KEYS = [k.strip() for k in os.environ.get("GEMINI_API_KEY", "").replace("\n", ",").split(",") if k.strip()]
 GEMINI_KEY = GEMINI_KEYS[0] if GEMINI_KEYS else ""
-GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-3.8-flash"
+GEMINI_MODEL = os.environ.get("GEMINI_MODEL") or "gemini-2.5-flash"
+GEMINI_FALLBACK_DEFAULT = "gemini-1.5-flash"
+
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "")
 CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "")
 MINIAPP_LINK = os.environ.get("MINIAPP_LINK", "") or SITE
 MARGIN = float(os.environ.get("MARGIN_PERCENT", "50"))
 QUERIES_PER_RUN = int(os.environ.get("QUERIES_PER_RUN", "2"))
 MAX_PRODUCTS = int(os.environ.get("MAX_PRODUCTS", "5"))
-# سقف تقریبی اعتبار ScraperAPI در هر اجرا (صفحه با render=true حدود ۱۰ اعتبار می‌خورد)
 MAX_CREDITS = int(os.environ.get("MAX_CREDITS", "150"))
 
-# جستجوهای دسته «گجت‌های هوشمند»؛ هر روز چند تا از این‌ها به نوبت انتخاب می‌شن
 QUERIES = [
     "smart watch", "tws wireless earbuds", "smart home wifi plug", "smart ring health tracker",
     "mini projector portable", "smart led desk lamp", "fitness tracker band", "magnetic wireless charger",
@@ -89,7 +91,6 @@ PD_RE = re.compile(r'(?:https?:)?//(?:www\.)?alibaba\.com/product-detail/[^"\'\s
 
 
 def extract_candidates(html):
-    """لینک صفحه‌ی محصول‌های Alibaba از صفحه‌ی نتایج جستجو"""
     html = _unescape(html)
     seen, out = set(), []
     for m in PD_RE.finditer(html):
@@ -110,7 +111,6 @@ IMG_RE = re.compile(r'(?:https?:)?//[a-z0-9.\-]*alicdn\.com/[^"\'\s<>\\)]+?\.(?:
 def _clean_img(u):
     if u.startswith("//"):
         u = "https:" + u
-    # حذف پسوند اندازه، مثل ...jpg_80x80.jpg -> ...jpg
     return re.sub(r"(\.(?:jpg|jpeg|png|webp))_[^/]*$", r"\1", u, flags=re.I)
 
 
@@ -160,51 +160,61 @@ def page_text(html, limit=14000):
 
 # -------------------------------------------------------------------- Gemini
 PROMPT = """You are a product data extractor and Persian e-commerce copywriter for an Iranian B2B wholesale catalog.
-Below is the text of ONE wholesale product page from __SITE__ (the text may be English or Chinese; translate to Persian). Extract facts ONLY from this text. Never invent
-prices, specs, certifications, warranties or supplier details. If something is not in the text, use null / [] / {}.
+Below is the text of ONE wholesale product page from __SITE__ (the text may be English or Chinese; translate to Persian). 
+Extract facts ONLY from this text. Never invent prices, specs, certifications, warranties, or supplier details. 
+If something is not in the text, use null / [] / {}.
 
 Return ONLY a JSON object with exactly these keys:
 {
- "usable": true|false,            // false if this is not a single physical consumer product, or no price at all is visible on the page
- "brandRisk": true|false,         // true ONLY if the product itself is sold under a third-party brand name/logo (Apple, AirPods, Samsung, Xiaomi, Sony, Dyson, ...) or is described as clone/replica/1:1/copy.
-                                  // Compatibility mentions ("for iPhone", "MagSafe compatible", "Find My", "Qi2", "Android/iOS") are NOT brand risk.
- "rejectReason": "short English reason if usable=false or brandRisk=true, otherwise null",
- "originalTitle": "string",
- "currency": "ISO code of the currency the page shows prices in (USD, EUR, GBP, CNY, ...). Do NOT convert; copy prices exactly as shown. On 1688.com the symbol ¥/￥/元 always means CNY.",
- "tiers": [{"minQuantity": int, "price": number}],   // real price tiers from the page IN THAT CURRENCY, ascending by minQuantity. A single price or range "X-Y" => one tier with minQuantity = MOQ and price = lower value
- "moq": int|null,
- "soldCount": int|null,           // units sold / orders, only if shown
- "rating": number|null, "reviewCount": int|null,
- "supplier": {"name": "string|null", "country": "string|null", "city": "string|null", "yearsInBusiness": int|null,
-              "isVerified": bool, "hasTradeAssurance": bool},
- "faTitle": "Persian SEO title, max 70 chars, product type + main feature, natural Persian",
- "faShortDesc": "Persian, max 160 chars",
- "faFullDesc": "Persian, 120-220 words, 2-3 short paragraphs, factual, no hype, no unverifiable claims",
- "faFeatures": ["5-8 short Persian bullet points taken from the page"],
- "technicalSpecs": {"Persian label": "value with units"},    // max 12 items, only real specs from the page
- "category": "one of: __CATEGORIES__",
- "tags": ["up to 8 Persian keywords"]
+  "usable": true|false,
+  "brandRisk": true|false,
+  "rejectReason": "short English reason if usable=false or brandRisk=true, otherwise null",
+  "originalTitle": "string",
+  "currency": "ISO code of the currency the page shows prices in (USD, EUR, GBP, CNY, ...). Do NOT convert; copy prices exactly as shown. On 1688.com the symbol ¥/￥/元 always means CNY.",
+  "tiers": [{"minQuantity": int, "price": number}],
+  "moq": int|null,
+  "soldCount": int|null,
+  "rating": number|null,
+  "reviewCount": int|null,
+  "supplier": {
+    "name": "string|null", 
+    "country": "string|null", 
+    "city": "string|null", 
+    "yearsInBusiness": int|null,
+    "isVerified": bool, 
+    "hasTradeAssurance": bool
+  },
+  "faTitle": "Persian SEO title, max 70 chars, product type + main feature, natural Persian",
+  "faShortDesc": "Persian, max 160 chars, optimized for meta description",
+  "faFullDesc": "Persian, 120-220 words, 2-3 short paragraphs, factual, B2B wholesale tone, no unverifiable claims",
+  "faFeatures": ["5-8 short Persian bullet points taken from the page specs"],
+  "technicalSpecs": {"Persian label": "value with units"},
+  "category": "one of: __CATEGORIES__",
+  "tags": ["up to 8 high-intent Persian wholesale search keywords"]
 }
-Persian rules: modern, fluent Persian; keep model numbers/Latin technical terms as is; use Persian punctuation;
-do not mention Alibaba, 1688, Made-in-China or the supplier name inside faTitle/faShortDesc/faFullDesc.
 
-Chinese-page hints: 起批量/起订量 = MOQ; "≥N件 ¥X" = tier from N pieces at price X; 成交/已售 = sold count; 诚信通/实力商家 = verified supplier. Supplier country for 1688 is China.
+STRICT INSTRUCTIONS:
+- Pricing & Tiers: Parse "X-Y" or "X~Y" as a single tier with price=lower value and minQuantity=MOQ. Remove Chinese unit counters (e.g. 个, 件, 套).
+- Brand Risk: Set brandRisk=true ONLY if the product is sold under an unauthorized brand name/logo (Apple, AirPods, Xiaomi, Samsung, Sony, Dyson) or marked as clone/copy/replica/1:1. Compatibility terms ("for iPhone", "MagSafe compatible", "Find My", "Qi2", "Tuya", "Android/iOS") are NOT brand risk.
+- category MUST strictly match one entry from: __CATEGORIES__.
+- Modern, fluent, commercial Persian. Keep model numbers and Latin technical units (W, mAh, mm, dB, V) intact. Do NOT mention Alibaba, 1688, or the supplier name inside faTitle, faShortDesc, or faFullDesc.
+
+Chinese-page hints: 起批量/起订量 = MOQ; "≥N件 ¥X" = tier from N pieces at price X; 成交/已售 = sold count; 诚信通/实力商家 = verified supplier. Supplier country for 1688 is always China.
 
 SOURCE URL: __URL__
 __TEXT__
 """
 
-QUOTA_HITS = 0   # تعداد دفعاتی که سهمیه قطعی تمام شده است
-_EXH = set()     # ترکیب‌های (شماره کلید، مدل) که سهمیه‌ی روزانه‌شان تمام شده؛ سهمیه برای هر مدل جداست
+QUOTA_HITS = 0
+_EXH = set()
 
 
 def _models():
-    fb = os.environ.get("GEMINI_FALLBACK_MODELS", "gemini-flash-latest")
+    fb = os.environ.get("GEMINI_FALLBACK_MODELS", GEMINI_FALLBACK_DEFAULT)
     return [GEMINI_MODEL] + [m.strip() for m in fb.split(",") if m.strip() and m.strip() != GEMINI_MODEL]
 
 
 def _combos(skip):
-    """ترکیب‌های (کلید، مدل) قابل استفاده؛ اول مدل اصلی روی همه‌ی کلیدها، بعد مدل‌های جایگزین"""
     return [(ki, m) for m in _models() for ki in range(len(GEMINI_KEYS))
             if (ki, m) not in _EXH and (ki, m) not in skip]
 
@@ -217,51 +227,60 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {"temperature": 0.3, "responseMimeType": "application/json"},
     }
-    skip = set()      # ترکیب‌هایی که در همین محصول خطای موقت دادند
-    mfail = {}        # شمار خطای موقت (شلوغی/تایم‌اوت) به‌ازای هر مدل؛ شلوغی مدل به کلید ربطی ندارد
+    skip = set()
+    mfail = {}
     waited = False
 
     def _transient(ki, model):
         skip.add((ki, model))
         mfail[model] = mfail.get(model, 0) + 1
-        if mfail[model] >= 2:     # دو خطای پشت‌سرهم یعنی خود مدل شلوغ است؛ بقیه‌ی کلیدها را روی آن امتحان نکن
+        if mfail[model] >= 2:
             for k2 in range(len(GEMINI_KEYS)):
                 skip.add((k2, model))
         time.sleep(3)
 
-    for attempt in range(10):
+    for attempt in range(12):
         avail = _combos(skip)
         if not avail:
             if all((ki, m) in _EXH for m in _models() for ki in range(len(GEMINI_KEYS))):
                 QUOTA_HITS = 2
                 return None
-            if not waited:            # همه‌ی مدل‌ها شلوغ‌اند: یک بار صبر و تلاش دوباره
+            if not waited:
                 waited = True
-                log("  همه‌ی مدل‌ها شلوغ‌اند؛ ۳۰ ثانیه صبر و تلاش دوباره...")
-                time.sleep(30)
+                backoff_time = (2 ** (attempt % 4)) * 6 + random.uniform(3, 8)
+                log(f"  همه‌ی مدل‌ها موقتاً شلوغ‌اند؛ {backoff_time:.1f} ثانیه شکیبایی هوشمند...")
+                time.sleep(backoff_time)
                 skip.clear()
                 mfail.clear()
                 continue
             return None
+
         ki, model = avail[0]
         try:
             r = requests.post(
                 f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent",
                 headers={"x-goog-api-key": GEMINI_KEYS[ki], "Content-Type": "application/json"},
-                json=body, timeout=50)
+                json=body,
+                timeout=90  # افزایش مهلت به ۹۰ ثانیه برای رفع خطای Read timed out
+            )
 
             if r.status_code == 200:
                 raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
                 raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
                 QUOTA_HITS = 0
+                time.sleep(4)  # فاصله ۴ ثانیه‌ای برای حفظ سقف RPM
                 return json.loads(raw)
 
             log(f"  Gemini[{model}#{ki + 1}] HTTP {r.status_code}: {r.text[:160]}")
 
-            if r.status_code in (400, 404):          # مدل نامعتبر برای این کلید
+            if r.status_code in (400, 404):
                 _EXH.add((ki, model))
                 continue
-            if r.status_code in (500, 503):           # شلوغی گوگل
+            if r.status_code in (500, 503):
+                # خطای شلوغی کلاستر با وقفه تصاعدی
+                wait_sec = (2 ** min(attempt, 3)) * 4 + random.uniform(1, 4)
+                log(f"  شلوغی موقت سرور؛ وقفه {wait_sec:.1f} ثانیه‌ای...")
+                time.sleep(wait_sec)
                 _transient(ki, model)
                 continue
             if r.status_code == 429:
@@ -274,10 +293,10 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
                     _EXH.add((ki, model))
                     log(f"  سهمیه‌ی روزانه‌ی «{model}» برای کلید {ki + 1} تمام شد")
                 else:
-                    skip.add((ki, model))             # سقف دقیقه: ترکیب بعدی
+                    skip.add((ki, model))
                     if len(avail) <= 1:
-                        log("  محدودیت نرخ دقیقه (RPM)؛ ۲۰ ثانیه توقف...")
-                        time.sleep(20)
+                        log("  محدودیت نرخ دقیقه (RPM)؛ ۲۵ ثانیه توقف...")
+                        time.sleep(25)
                         skip.clear()
                 continue
             return None
@@ -289,7 +308,6 @@ def gemini_extract(url, text, site_name="Alibaba.com"):
 
 # ------------------------------------------------------------------- Mapping
 def trend_score(g):
-    """امتیاز ترند فقط از داده‌ی واقعی: تعداد فروش (در صورت وجود) و در غیر این صورت ۰"""
     sold = g.get("soldCount")
     if isinstance(sold, (int, float)) and sold > 0:
         return int(min(99, round(60 + 12 * math.log10(sold + 1))))
@@ -300,7 +318,6 @@ _FX = {}
 
 
 def to_usd_factor(cur):
-    """نرخ تبدیل ارز نمایش‌داده‌شده به دلار (از open.er-api.com)؛ None اگر در دسترس نبود"""
     cur = (cur or "USD").upper().strip()
     if cur in ("USD", "US$", "$"):
         return 1.0
@@ -344,7 +361,6 @@ def build_tiers(tiers, usd_rate, factor=1.0):
 
 
 def to_product(cand, g, images, usd_rate):
-    """خروجی Gemini را به فرمت ingest_products تبدیل می‌کند؛ اگر نامعتبر بود None"""
     if not g:
         return None, "gemini-error"
     if g.get("brandRisk"):
@@ -441,7 +457,6 @@ def hunt(limit, known, usd_rate):
         found = extract_candidates(html)
         log(f"  {len(found)} لینک محصول پیدا شد")
         cands.append(found)
-    # ادغام نوبتی نتایج جستجوها
     merged, seen = [], set()
     for i in range(max((len(c) for c in cands), default=0)):
         for c in cands:
@@ -452,7 +467,7 @@ def hunt(limit, known, usd_rate):
              if f"alibaba:{c['id']}" not in known["externalIds"] and c["url"].lower().split("//")[-1].replace("www.", "") not in known["sourceUrls"]]
     log(f"کاندیدا: {len(merged)} | جدید (غیرتکراری): {len(fresh)}")
     if not merged:
-        raise SystemExit("هیچ کاندیدایی از صفحه‌ی جستجو استخراج نشد (احتمال تغییر ساختار صفحه یا بلاک شدن).")
+        raise SystemExit("هیچ کاندیدایی از صفحه‌ی جستجو استخراج نشد.")
 
     products = []
     for cand in fresh:
@@ -481,21 +496,25 @@ def hunt(limit, known, usd_rate):
 
 
 # ------------------------------------------------------------- Queue mode
-# پیشوند externalId ← نام پلتفرم (باید با افزونه و api.php هماهنگ باشد)
 SITES = {"alibaba": "Alibaba.com", "1688": "1688.com", "mic": "Made-in-China.com"}
 
 IDEAS_PROMPT = """You are a sourcing analyst for an Iranian B2B wholesale importer of consumer gadgets
 (smart watches/rings, earbuds, chargers, power banks, mini projectors, smart home, trackers, car and travel gadgets).
 Suggest __N__ NEW product ideas that are trending right now for wholesale from China, as short English
 search keywords for the Alibaba.com search box (2-5 words, generic product type + key feature).
-Rules: no brand names (Apple, Samsung, Xiaomi, AirPods ...), no prices, no supplier names, no URLs.
-Do not repeat any of these already used keywords: __USED__
-For each idea also give "keywordZh": the same product as a natural Simplified-Chinese search phrase for 1688.com (2-8 characters).
-Return ONLY JSON: {"ideas":[{"keyword":"...","keywordZh":"...","note":"one short Persian line on why it is trending"}]}"""
+
+Rules:
+- No brand names (Apple, Samsung, Xiaomi, AirPods, Anker, Baseus, etc.).
+- No spy/covert cameras, no jamming/surveillance gear, no drones/quadcopters.
+- No prices, no supplier names, no URLs.
+- Do not repeat any of these already used keywords: __USED__
+- For each idea, provide "keywordZh": the same product as a natural Simplified-Chinese search phrase for 1688.com (2-8 characters).
+
+Return ONLY JSON:
+{"ideas":[{"keyword":"...","keywordZh":"...","note":"one short Persian line on why it is trending"}]}"""
 
 
 def gen_ideas(n=6):
-    """ایده (کلیدواژه) از Gemini؛ فقط ایده، نه قیمت و نه تأمین‌کننده"""
     status = nfs("queue_status")
     if status.get("ideas_pending", 0) >= 10:
         log(f"صف ایده‌ها پر است ({status['ideas_pending']})؛ ایده‌ی جدید لازم نیست")
@@ -504,9 +523,15 @@ def gen_ideas(n=6):
     prompt = IDEAS_PROMPT.replace("__N__", str(n)).replace("__USED__", used)
     body = {"contents": [{"parts": [{"text": prompt}]}],
             "generationConfig": {"temperature": 0.9, "responseMimeType": "application/json"}}
+    
+    # چرخش هوشمند کلیدها برای ایده‌یابی
+    active_key = GEMINI_KEYS[(_combos(set()) or [(0, "")])[0][0]] if GEMINI_KEYS else ""
     r = requests.post(
         f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent",
-        headers={"x-goog-api-key": (GEMINI_KEYS[(_combos(set()) or [(0, "")])[0][0]] if GEMINI_KEYS else ""), "Content-Type": "application/json"}, json=body, timeout=75)
+        headers={"x-goog-api-key": active_key, "Content-Type": "application/json"},
+        json=body,
+        timeout=90
+    )
     if r.status_code != 200:
         raise SystemExit(f"Gemini HTTP {r.status_code}: {r.text[:200]}")
     raw = r.json()["candidates"][0]["content"]["parts"][0]["text"]
@@ -519,7 +544,6 @@ def gen_ideas(n=6):
 
 
 def raw_to_text(raw):
-    """متن خام استخراج‌شده توسط افزونه را برای Gemini آماده می‌کند"""
     parts = [f"TITLE: {raw.get('title', '')}"]
     if raw.get("priceRange"):
         parts.append(f"PRICE RANGE (as shown): {raw['priceRange']}")
@@ -552,18 +576,18 @@ def process_queue(limit, usd_rate, source=""):
         log(f"  عنوان: {raw.get('title', '')[:70]} | طول متن: {len(txt)} | قیمت نمایش‌داده‌شده: {raw.get('priceRange') or '—'}")
         g = gemini_extract(raw["sourceUrl"], txt, SITES[prefix])
         if g is None and QUOTA_HITS >= 2:
-            log("  سهمیه‌ی Gemini تمام شده؛ اجرا متوقف شد (محصولات در صف می‌مانند). چند ساعت بعد یا فردا دوباره اجرا کنید.")
+            log("  سهمیه‌ی Gemini تمام شده؛ اجرا متوقف شد (محصولات در صف می‌مانند).")
             break
         prod, why = to_product(cand, g, raw.get("images") or [], usd_rate)
         if not prod:
             log(f"  رد شد: {why}")
-            if why != "gemini-error":   # خطای موقت Gemini: در صف می‌ماند تا اجرای بعد
+            if why != "gemini-error":
                 bad.append((raw["id"], why))
             continue
         log(f"  OK: {prod['faTitle']}  ({len(prod['images'])} عکس، {len(prod['tieredPricing'])} پله قیمت)")
         products.append(prod)
         ok_ids.append(raw["id"])
-        time.sleep(5)
+        time.sleep(4)
     return products, ok_ids, bad
 
 
