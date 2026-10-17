@@ -1,4 +1,5 @@
 import { CurrencyRates } from '../types';
+import { withAdminKey } from './hostApi';
 
 export const DEFAULT_RATES: CurrencyRates = {
   usd: 268300, // نرخ روز دلار بازار آزاد (تومان)
@@ -153,7 +154,7 @@ export async function saveCustomRatesToServer(usd: number, aed: number, cny: num
     try {
       await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withAdminKey({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(payload),
       });
     } catch (e) {

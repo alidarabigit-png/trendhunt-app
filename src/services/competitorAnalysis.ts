@@ -1,3 +1,5 @@
+import { withAdminKey } from './hostApi';
+
 export interface CompetitorAnalysisResult {
   marketTitle: string;
   avgRetailPriceToman: number;
@@ -32,7 +34,7 @@ export async function analyzeCompetitorMarket(
     try {
       const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withAdminKey({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           productTitle,
           category,

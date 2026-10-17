@@ -13,6 +13,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { ProductItem } from '../types';
+import { withAdminKey } from '../services/hostApi';
 
 interface UploadedMediaItem {
   id: string;
@@ -79,7 +80,7 @@ export const HostMediaUploadModal: React.FC<HostMediaUploadModalProps> = ({
         try {
           const res = await fetch(ep, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: withAdminKey({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ image: dataUrl }),
           });
           if (res.ok) {

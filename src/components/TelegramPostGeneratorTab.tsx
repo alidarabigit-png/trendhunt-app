@@ -27,6 +27,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { ProductItem, TelegramConfig } from '../types';
+import { withAdminKey } from '../services/hostApi';
 
 interface TelegramPostGeneratorTabProps {
   products: ProductItem[];
@@ -228,7 +229,7 @@ ${tagsText}`;
         try {
           await fetch(ep, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: withAdminKey({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ settings: telegramConfig }),
           });
         } catch (e) {}
@@ -254,7 +255,7 @@ ${tagsText}`;
     try {
       const res = await fetch('/api/telegram/verify', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withAdminKey({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ botToken: token }),
       });
       const data = await res.json();
@@ -323,7 +324,7 @@ ${tagsText}`;
       // Call our cloud backend proxy which has direct, unfiltered access to Telegram Bot API
       const response = await fetch('/api/telegram/broadcast', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withAdminKey({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({
           botToken: token,
           channelId: channel,

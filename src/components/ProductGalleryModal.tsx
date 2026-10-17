@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { ProductItem } from '../types';
 import { upgradeAlibabaImageQuality } from '../utils/imageQuality';
+import { withAdminKey } from '../services/hostApi';
 
 interface ProductGalleryModalProps {
   isOpen: boolean;
@@ -108,7 +109,7 @@ export const ProductGalleryModal: React.FC<ProductGalleryModalProps> = ({
         try {
           const res = await fetch(ep, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: withAdminKey({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ image: base64Data }),
           });
           if (res.ok) {

@@ -37,18 +37,18 @@
         "minQuantity": 10,
         "maxQuantity": 39,
         "priceUsd": 14.8,
-        "calculatedPriceToman": 5838711
+        "calculatedPriceToman": 5956260
       },
       {
         "minQuantity": 40,
         "maxQuantity": 149,
         "priceUsd": 12.73,
-        "calculatedPriceToman": 5022080
+        "calculatedPriceToman": 5123189
       },
       {
         "minQuantity": 150,
         "priceUsd": 10.95,
-        "calculatedPriceToman": 4319857
+        "calculatedPriceToman": 4406828
       }
     ],
     "supplier": {
@@ -103,18 +103,18 @@
         "minQuantity": 6,
         "maxQuantity": 23,
         "priceUsd": 28.5,
-        "calculatedPriceToman": 11243464
+        "calculatedPriceToman": 11469825
       },
       {
         "minQuantity": 24,
         "maxQuantity": 89,
         "priceUsd": 24.51,
-        "calculatedPriceToman": 9669379
+        "calculatedPriceToman": 9864050
       },
       {
         "minQuantity": 90,
         "priceUsd": 21.09,
-        "calculatedPriceToman": 8320163
+        "calculatedPriceToman": 8487671
       }
     ],
     "supplier": {
@@ -170,18 +170,18 @@
         "minQuantity": 10,
         "maxQuantity": 39,
         "priceUsd": 18.5,
-        "calculatedPriceToman": 7298389
+        "calculatedPriceToman": 7445325
       },
       {
         "minQuantity": 40,
         "maxQuantity": 149,
         "priceUsd": 15.91,
-        "calculatedPriceToman": 6276614
+        "calculatedPriceToman": 6402980
       },
       {
         "minQuantity": 150,
         "priceUsd": 13.69,
-        "calculatedPriceToman": 5400808
+        "calculatedPriceToman": 5509541
       }
     ],
     "supplier": {
@@ -234,18 +234,18 @@
         "minQuantity": 15,
         "maxQuantity": 59,
         "priceUsd": 11.2,
-        "calculatedPriceToman": 4418484
+        "calculatedPriceToman": 4507440
       },
       {
         "minQuantity": 60,
         "maxQuantity": 224,
         "priceUsd": 9.63,
-        "calculatedPriceToman": 3799107
+        "calculatedPriceToman": 3875594
       },
       {
         "minQuantity": 225,
         "priceUsd": 8.29,
-        "calculatedPriceToman": 3270467
+        "calculatedPriceToman": 3336311
       }
     ],
     "supplier": {
@@ -298,18 +298,18 @@
         "minQuantity": 6,
         "maxQuantity": 23,
         "priceUsd": 34,
-        "calculatedPriceToman": 13413255
+        "calculatedPriceToman": 13683300
       },
       {
         "minQuantity": 24,
         "maxQuantity": 89,
         "priceUsd": 29.24,
-        "calculatedPriceToman": 11535399
+        "calculatedPriceToman": 11767638
       },
       {
         "minQuantity": 90,
         "priceUsd": 25.16,
-        "calculatedPriceToman": 9925809
+        "calculatedPriceToman": 10125642
       }
     ],
     "supplier": {
@@ -362,18 +362,18 @@
         "minQuantity": 8,
         "maxQuantity": 31,
         "priceUsd": 19.8,
-        "calculatedPriceToman": 7811249
+        "calculatedPriceToman": 7968510
       },
       {
         "minQuantity": 32,
         "maxQuantity": 119,
         "priceUsd": 17.03,
-        "calculatedPriceToman": 6718463
+        "calculatedPriceToman": 6853724
       },
       {
         "minQuantity": 120,
         "priceUsd": 14.65,
-        "calculatedPriceToman": 5779535
+        "calculatedPriceToman": 5895893
       }
     ],
     "supplier": {
@@ -428,18 +428,18 @@
         "minQuantity": 15,
         "maxQuantity": 59,
         "priceUsd": 9.8,
-        "calculatedPriceToman": 3866174
+        "calculatedPriceToman": 3944010
       },
       {
         "minQuantity": 60,
         "maxQuantity": 224,
         "priceUsd": 8.43,
-        "calculatedPriceToman": 3325698
+        "calculatedPriceToman": 3392654
       },
       {
         "minQuantity": 225,
         "priceUsd": 7.25,
-        "calculatedPriceToman": 2860179
+        "calculatedPriceToman": 2917763
       }
     ],
     "supplier": {
@@ -512,7 +512,7 @@
         "priceUsd": 32.5,
         "priceCny": 235.3,
         "priceAed": 119.3,
-        "calculatedPriceToman": 12821494
+        "calculatedPriceToman": 13079625
       },
       {
         "minQuantity": 100,
@@ -520,14 +520,14 @@
         "priceUsd": 31.5,
         "priceCny": 228.1,
         "priceAed": 115.6,
-        "calculatedPriceToman": 12426986
+        "calculatedPriceToman": 12677175
       },
       {
         "minQuantity": 1000,
         "priceUsd": 30.5,
         "priceCny": 220.8,
         "priceAed": 111.9,
-        "calculatedPriceToman": 12032479
+        "calculatedPriceToman": 12274725
       }
     ],
     "supplier": {
@@ -587,18 +587,18 @@
         "minQuantity": 50,
         "maxQuantity": 199,
         "priceUsd": 14.5,
-        "calculatedPriceToman": 5720359
+        "calculatedPriceToman": 5835525
       },
       {
         "minQuantity": 200,
         "maxQuantity": 999,
         "priceUsd": 12.8,
-        "calculatedPriceToman": 5049696
+        "calculatedPriceToman": 5151360
       },
       {
         "minQuantity": 1000,
         "priceUsd": 10.9,
-        "calculatedPriceToman": 4300132
+        "calculatedPriceToman": 4386705
       }
     ],
     "supplier": {
@@ -658,18 +658,18 @@
         "minQuantity": 30,
         "maxQuantity": 99,
         "priceUsd": 6.8,
-        "calculatedPriceToman": 2682651
+        "calculatedPriceToman": 2736660
       },
       {
         "minQuantity": 100,
         "maxQuantity": 499,
         "priceUsd": 5.5,
-        "calculatedPriceToman": 2169791
+        "calculatedPriceToman": 2213475
       },
       {
         "minQuantity": 500,
         "priceUsd": 4.3,
-        "calculatedPriceToman": 1696382
+        "calculatedPriceToman": 1730535
       }
     ],
     "supplier": {
@@ -729,18 +729,18 @@
         "minQuantity": 50,
         "maxQuantity": 199,
         "priceUsd": 7.9,
-        "calculatedPriceToman": 3116609
+        "calculatedPriceToman": 3179355
       },
       {
         "minQuantity": 200,
         "maxQuantity": 799,
         "priceUsd": 6.4,
-        "calculatedPriceToman": 2524848
+        "calculatedPriceToman": 2575680
       },
       {
         "minQuantity": 800,
         "priceUsd": 5.1,
-        "calculatedPriceToman": 2011988
+        "calculatedPriceToman": 2052495
       }
     ],
     "supplier": {
@@ -800,18 +800,18 @@
         "minQuantity": 20,
         "maxQuantity": 99,
         "priceUsd": 8.5,
-        "calculatedPriceToman": 3353314
+        "calculatedPriceToman": 3420825
       },
       {
         "minQuantity": 100,
         "maxQuantity": 499,
         "priceUsd": 7.1,
-        "calculatedPriceToman": 2801003
+        "calculatedPriceToman": 2857395
       },
       {
         "minQuantity": 500,
         "priceUsd": 5.8,
-        "calculatedPriceToman": 2288144
+        "calculatedPriceToman": 2334210
       }
     ],
     "supplier": {
@@ -870,18 +870,18 @@
         "minQuantity": 10,
         "maxQuantity": 49,
         "priceUsd": 23.5,
-        "calculatedPriceToman": 9270926
+        "calculatedPriceToman": 9457575
       },
       {
         "minQuantity": 50,
         "maxQuantity": 199,
         "priceUsd": 19.8,
-        "calculatedPriceToman": 7811249
+        "calculatedPriceToman": 7968510
       },
       {
         "minQuantity": 200,
         "priceUsd": 16.5,
-        "calculatedPriceToman": 6509374
+        "calculatedPriceToman": 6640425
       }
     ],
     "supplier": {
@@ -940,18 +940,18 @@
         "minQuantity": 30,
         "maxQuantity": 99,
         "priceUsd": 11.8,
-        "calculatedPriceToman": 4655189
+        "calculatedPriceToman": 4748910
       },
       {
         "minQuantity": 100,
         "maxQuantity": 499,
         "priceUsd": 10.1,
-        "calculatedPriceToman": 3984526
+        "calculatedPriceToman": 4064745
       },
       {
         "minQuantity": 500,
         "priceUsd": 8.7,
-        "calculatedPriceToman": 3432215
+        "calculatedPriceToman": 3501315
       }
     ],
     "supplier": {
@@ -1008,18 +1008,18 @@
         "minQuantity": 20,
         "maxQuantity": 79,
         "priceUsd": 9.4,
-        "calculatedPriceToman": 3708371
+        "calculatedPriceToman": 3783030
       },
       {
         "minQuantity": 80,
         "maxQuantity": 299,
         "priceUsd": 8.1,
-        "calculatedPriceToman": 3195511
+        "calculatedPriceToman": 3259845
       },
       {
         "minQuantity": 300,
         "priceUsd": 6.9,
-        "calculatedPriceToman": 2722102
+        "calculatedPriceToman": 2776905
       }
     ],
     "supplier": {
@@ -1075,18 +1075,18 @@
         "minQuantity": 50,
         "maxQuantity": 199,
         "priceUsd": 5.6,
-        "calculatedPriceToman": 2209242
+        "calculatedPriceToman": 2253720
       },
       {
         "minQuantity": 200,
         "maxQuantity": 799,
         "priceUsd": 4.8,
-        "calculatedPriceToman": 1893636
+        "calculatedPriceToman": 1931760
       },
       {
         "minQuantity": 800,
         "priceUsd": 3.9,
-        "calculatedPriceToman": 1538579
+        "calculatedPriceToman": 1569555
       }
     ],
     "supplier": {
@@ -1148,18 +1148,18 @@
         "minQuantity": 10,
         "maxQuantity": 39,
         "priceUsd": 18.2,
-        "calculatedPriceToman": 7180037
+        "calculatedPriceToman": 7324590
       },
       {
         "minQuantity": 40,
         "maxQuantity": 149,
         "priceUsd": 15.65,
-        "calculatedPriceToman": 6174042
+        "calculatedPriceToman": 6298343
       },
       {
         "minQuantity": 150,
         "priceUsd": 13.47,
-        "calculatedPriceToman": 5314016
+        "calculatedPriceToman": 5421002
       }
     ],
     "supplier": {
@@ -1220,18 +1220,18 @@
         "minQuantity": 20,
         "maxQuantity": 79,
         "priceUsd": 8.9,
-        "calculatedPriceToman": 3511117
+        "calculatedPriceToman": 3581805
       },
       {
         "minQuantity": 80,
         "maxQuantity": 299,
         "priceUsd": 7.65,
-        "calculatedPriceToman": 3017982
+        "calculatedPriceToman": 3078743
       },
       {
         "minQuantity": 300,
         "priceUsd": 6.59,
-        "calculatedPriceToman": 2599804
+        "calculatedPriceToman": 2652146
       }
     ],
     "supplier": {

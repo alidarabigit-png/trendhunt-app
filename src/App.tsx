@@ -25,6 +25,7 @@ import {
 import { INITIAL_PRODUCTS } from './data/sampleProducts';
 import { INITIAL_CUSTOMERS, INITIAL_INQUIRIES, DEFAULT_CUSTOMER } from './data/sampleCustomers';
 import { DEFAULT_RATES, fetchLiveExchangeRates, saveCustomRatesToServer } from './services/currencyService';
+import { withAdminKey } from './services/hostApi';
 import { initAuth, googleSignIn, logout } from './services/firebaseAuth';
 import {
   createWholesaleSpreadsheet,
@@ -273,7 +274,7 @@ export default function App() {
         for (const ep of endpoints) {
           try {
             const cacheBusterUrl = `${ep}${ep.includes('?') ? '&' : '?'}_t=${Date.now()}`;
-            const res = await fetch(cacheBusterUrl, { cache: 'no-store' });
+            const res = await fetch(cacheBusterUrl, { cache: 'no-store', headers: withAdminKey() });
             if (res.ok) {
               const data = await res.json();
               if (data.settings && typeof data.settings === 'object') {
@@ -838,7 +839,7 @@ export default function App() {
       const endpoint = isPhpHost ? '/api.php?action=save_products' : '/api/catalog';
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withAdminKey({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ products }),
       });
       const data = await res.json();

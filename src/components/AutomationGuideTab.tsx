@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { ProductItem } from '../types';
 import { getCleanWorkingSourceUrl } from '../utils/sourceUrlUtils';
+import { withAdminKey } from '../services/hostApi';
 
 interface AutomationGuideTabProps {
   products?: ProductItem[];
@@ -161,7 +162,7 @@ export const AutomationGuideTab: React.FC<AutomationGuideTabProps> = ({
       const endpoint = isPhpHost ? '/api.php?action=save_products' : '/api/catalog';
       await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: withAdminKey({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ products: sanitized }),
       });
 

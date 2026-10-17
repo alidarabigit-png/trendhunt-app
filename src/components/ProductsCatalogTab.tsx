@@ -39,6 +39,7 @@ import { SmartPricingCard } from './SmartPricingCard';
 import { ProductGalleryModal } from './ProductGalleryModal';
 import { getPlatformSearchUrl, getGoogleImagesSearchUrl, getCleanWorkingSourceUrl } from '../utils/sourceUrlUtils';
 import { deduplicateProducts } from '../utils/catalogUtils';
+import { withAdminKey } from '../services/hostApi';
 
 interface ProductsCatalogTabProps {
   products: ProductItem[];
@@ -123,7 +124,7 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
     try {
       const isPhpHost = window.location.hostname.includes('nafisstore.com') || window.location.pathname.includes('.php');
       const ep = isPhpHost ? '/api.php?action=cache_catalog_images' : 'https://nfs.nafisstore.com/api.php?action=cache_catalog_images';
-      const res = await fetch(ep, { method: 'POST' });
+      const res = await fetch(ep, { method: 'POST', headers: withAdminKey() });
       const data = await res.json();
       if (data.success) {
         setCacheResultMsg(`✅ تمام عکس‌ها (${data.cached_images_count || 0}) با موفقیت در پوشه uploads هاست ذخیره شدند.`);
