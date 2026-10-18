@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { ProductItem, CurrencyRates } from '../types';
 import { upgradeAlibabaImageQuality } from '../utils/imageQuality';
+import { ManualProcessTab } from './ManualProcessTab';
 import { generateSmartSeo } from '../utils/seoGenerator';
 
 interface ManualProductIngestModalProps {
@@ -181,20 +182,6 @@ export const ManualProductIngestModal: React.FC<ManualProductIngestModalProps> =
         }
       } catch (e) {}
 
-      // 2. Fetch directly from Google Sheets Apps Script Queue
-      try {
-        const sheetRes = await fetch('/api/sheets/fetch-queue', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({}),
-        });
-        if (sheetRes.ok) {
-          const sheetData = await sheetRes.json();
-          if (sheetData.products && Array.isArray(sheetData.products)) {
-            allFound.push(...sheetData.products);
-          }
-        }
-      } catch (e) {}
 
       if (allFound.length > 0) {
         // Normalize and filter out empty / corrupt items
@@ -652,142 +639,8 @@ export const ManualProductIngestModal: React.FC<ManualProductIngestModalProps> =
         </div>
 
         {/* 1. QUEUE TAB (صف هوشمند کالاها) */}
-        {ingestMode === 'queue' && (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between text-xs">
-              <span className="font-bold text-slate-300 flex items-center gap-1.5">
-                <Layers className="w-4 h-4 text-amber-400" />
-                <span>کالاهای منتظر در صف استخراج افزونه کروم:</span>
-              </span>
-              <div className="flex items-center gap-2">
-                {pendingQueue.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={clearEntireQueue}
-                    className="text-[11px] text-rose-400 hover:text-rose-300 flex items-center gap-1 transition cursor-pointer px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20"
-                    title="پاک کردن تمام کالاهای ذخیره شده در صف"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    <span>پاکسازی کل صف</span>
-                  </button>
-                )}
-                <button
-                  type="button"
-                  onClick={checkPendingQueue}
-                  disabled={isCheckingQueue}
-                  className="text-[11px] text-sky-400 hover:text-sky-300 flex items-center gap-1 transition cursor-pointer px-2.5 py-1 rounded-xl bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/20"
-                >
-                  <RefreshCw className={`w-3.5 h-3.5 ${isCheckingQueue ? 'animate-spin' : ''}`} />
-                  <span>بروزرسانی از شیت</span>
-                </button>
-              </div>
-            </div>
+        {(ingestMode === 'queue' || ingestMode === 'paste') && <ManualProcessTab />}
 
-            {pendingQueue.length === 0 ? (
-              <div className="text-center py-8 px-4 rounded-2xl bg-slate-950/40 border border-dashed border-slate-800 space-y-2">
-                <Zap className="w-8 h-8 text-amber-400/60 mx-auto" />
-                <p className="text-xs font-semibold text-slate-300">صف استخراج فعلاً خالی است</p>
-                <p className="text-[11px] text-slate-500 max-w-sm mx-auto">
-                  هر کالایی را در علی‌بابا یا 1688 با افزونه استخراج کنید یا ردیف آن را در تب «پیست» قرار دهید، فوراً اینجا با مشخصات و عکس اصلی ظاهر می‌شود.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2.5 max-h-[360px] overflow-y-auto pr-1">
-                {pendingQueue.map((item, idx) => {
-                  const title = item.title_en || item.title || item.title_fa || 'محصول وارداتی جدید';
-                  const img = item.image || (Array.isArray(item.images) && item.images[0]) || '';
-                  const price = item.priceRange || item.price || 'استعلام روز';
-                  const moqVal = item.moq || '5';
-
-                  return (
-                    <div
-                      key={idx}
-                      className="p-3 rounded-2xl bg-slate-800/80 border border-slate-700/80 hover:border-amber-500/40 transition flex items-center justify-between gap-3 shadow-sm"
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {img ? (
-                          <img
-                            src={upgradeAlibabaImageQuality(img)}
-                            alt=""
-                            className="w-14 h-14 rounded-xl object-cover bg-slate-900 border border-slate-700 shrink-0"
-                          />
-                        ) : (
-                          <div className="w-14 h-14 rounded-xl bg-slate-900 border border-slate-700 flex items-center justify-center shrink-0 text-slate-500">
-                            <Layers className="w-5 h-5" />
-                          </div>
-                        )}
-                        <div className="min-w-0 space-y-1">
-                          <h4 className="text-xs font-bold text-slate-100 line-clamp-1 leading-snug" title={title}>
-                            {title}
-                          </h4>
-                          <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-                            <span className="text-amber-300 font-mono font-bold">قیمت: {price}</span>
-                            <span>•</span>
-                            <span>حداقل تیراژ: {moqVal}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => handleQuickAddFromQueue(item, idx)}
-                          disabled={isProcessing}
-                          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 text-xs font-black transition cursor-pointer shadow-md flex items-center gap-1 disabled:opacity-50"
-                          title="تولید خودکار سئو و ثبت مستقیم در کاتالوگ"
-                        >
-                          <Sparkles className="w-3.5 h-3.5 fill-slate-950" />
-                          <span>ثبت با سئو خودکار</span>
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => loadItemIntoForm(item)}
-                          className="p-2 rounded-xl bg-slate-700 hover:bg-slate-600 text-slate-200 transition cursor-pointer"
-                          title="ویرایش دستی در فرم قبل از ثبت"
-                        >
-                          <Edit3 className="w-3.5 h-3.5" />
-                        </button>
-
-                        <button
-                          type="button"
-                          onClick={() => removeItemFromQueue(idx)}
-                          className="p-2 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-300 border border-rose-500/30 transition cursor-pointer"
-                          title="حذف از صف"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 2. PASTE TAB (پیست مستقیم سطر شیت یا خروجی JSON) */}
-        {ingestMode === 'paste' && (
-          <div className="space-y-3">
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/25 text-xs text-amber-200 space-y-1">
-              <strong className="block font-bold">📋 ورودی مستقیم داده‌ها:</strong>
-              <p className="text-[11px] text-slate-300 leading-relaxed">
-                می‌توانید کل یک سطر کپی‌شده از گوگل شیت مرجع خود یا متن JSON خروجی افزونه را مستقیماً در کادر زیر پیست (Ctrl+V) کنید تا به صورت خودکار به صف اضافه شود.
-              </p>
-            </div>
-
-            <textarea
-              rows={5}
-              placeholder="سطر کپی‌شده از گوگل شیت یا متن JSON افزونه را اینجا پیست کنید..."
-              value={extensionRawText}
-              onChange={(e) => handlePasteData(e.target.value)}
-              className="w-full bg-slate-950/70 border border-slate-700 rounded-2xl p-3 text-slate-200 font-mono text-xs focus:outline-none focus:border-amber-400 placeholder:text-slate-600"
-              dir="ltr"
-            />
-          </div>
-        )}
-
-        {/* 3. MANUAL / EDIT FORM (فرم تفکیک‌شده و تمیز) */}
         {ingestMode === 'manual' && (
           <form onSubmit={handleStartAutomation} className="space-y-3.5 text-xs">
             <div className="flex items-center justify-between pb-1 border-b border-slate-800">

@@ -35,8 +35,6 @@ interface TelegramPostGeneratorTabProps {
   telegramConfig: TelegramConfig;
   setTelegramConfig: (value: TelegramConfig | ((prev: TelegramConfig) => TelegramConfig)) => void;
   usdRate: number;
-  onImportFromSheets?: () => void;
-  isSyncingSheets?: boolean;
   onUpdateProductImages?: (productId: string, newImages: string[], newMainImage: string) => void;
 }
 
@@ -47,8 +45,6 @@ export const TelegramPostGeneratorTab: React.FC<TelegramPostGeneratorTabProps> =
   telegramConfig,
   setTelegramConfig,
   usdRate,
-  onImportFromSheets,
-  isSyncingSheets,
   onUpdateProductImages,
 }) => {
   // Always resolve the freshest product from the reactive products catalog
@@ -71,34 +67,7 @@ export const TelegramPostGeneratorTab: React.FC<TelegramPostGeneratorTabProps> =
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [isAutoDeploying, setIsAutoDeploying] = useState(false);
-  const [autoDeployStatus, setAutoDeployStatus] = useState<string | null>(null);
 
-  // Auto-deploy directly to live host without cPanel
-  const handleAutoDeploy = async () => {
-    setIsAutoDeploying(true);
-    setAutoDeployStatus(null);
-    try {
-      const res = await fetch('/api/deploy/remote', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          targetHost: 'https://nfs.nafisstore.com',
-          token: 'nfs2026',
-        }),
-      });
-      const data = await res.json();
-      if (data.ok) {
-        setAutoDeployStatus('✅ تبریک! هاست شما در ۳ ثانیه و بدون نیاز به ورود به سی‌پنل به آخرین نسخه به‌روزرسانی شد.');
-      } else {
-        setAutoDeployStatus('❌ ' + (data.error || 'خطا در استقرار مستقیم روی هاست'));
-      }
-    } catch (e: any) {
-      setAutoDeployStatus('❌ خطا در ارتباط با سرور: ' + (e.message || 'خطای شبکه'));
-    } finally {
-      setIsAutoDeploying(false);
-    }
-  };
 
   // Sync photo with current product whenever it or its images change
   useEffect(() => {
@@ -109,48 +78,6 @@ export const TelegramPostGeneratorTab: React.FC<TelegramPostGeneratorTabProps> =
     }
   }, [currentProduct?.id, currentProduct?.mainImage, currentProduct?.images]);
 
-  // Download dist.zip cleanly in memory via base64 Blob (100% immune to iframe/cookie corruption)
-  const handleDownloadZip = async () => {
-    setIsDownloading(true);
-    setDownloadSuccess(false);
-    try {
-      const res = await fetch('/api/dist-base64');
-      const data = await res.json();
-      if (!data.success || !data.base64) {
-        throw new Error(data.message || 'خطا در ساخت پکیج فایل');
-      }
-
-      // Convert base64 to real binary ArrayBuffer
-      const binaryString = window.atob(data.base64);
-      const len = binaryString.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
-      }
-
-      // Create pure binary ZIP Blob
-      const blob = new Blob([bytes.buffer], { type: 'application/zip' });
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      // Trigger instant clean download to Windows
-      const tempLink = document.createElement('a');
-      tempLink.href = blobUrl;
-      tempLink.download = 'nafisstore-miniapp-dist.zip';
-      document.body.appendChild(tempLink);
-      tempLink.click();
-      document.body.removeChild(tempLink);
-
-      setDownloadSuccess(true);
-      setTimeout(() => {
-        window.URL.revokeObjectURL(blobUrl);
-      }, 3000);
-    } catch (err: any) {
-      console.error('Download error:', err);
-      alert('خطا در دانلود فایل: ' + (err.message || 'لطفاً دوباره امتحان کنید'));
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   // Generate formatted Telegram post content (guaranteed to be under Telegram's 1024-char limit for sendPhoto)
   const generatePostText = (product: ProductItem | null, isCompactForPhoto = true) => {
@@ -377,91 +304,6 @@ ${tagsText}`;
   return (
     <div className="space-y-6">
       {/* 🚀 Cloudflare & Telegram Bot Deployment & Download Banner */}
-      <div className="bg-gradient-to-r from-emerald-950/70 via-slate-900 to-sky-950/70 border-2 border-emerald-500/40 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col lg:flex-row items-center justify-between gap-4">
-        <div className="flex items-start gap-3.5 text-right w-full lg:w-auto">
-          <div className="w-11 h-11 rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-            <Download className="w-6 h-6" />
-          </div>
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-bold text-white text-sm sm:text-base">
-                بسته استقرار و فایل‌های مینی‌آپ (dist.zip)
-              </span>
-              <span className="text-[11px] bg-emerald-500/20 text-emerald-300 font-bold px-2 py-0.5 rounded-full border border-emerald-500/30">
-                نسخه نهایی هماهنگ با هاست
-              </span>
-            </div>
-            <p className="text-xs text-slate-300 leading-relaxed">
-              این پکیج شامل فایل‌های آماده وب‌اپ و API هاست است که به صورت مستقیم با ساب‌دامین اختصاصی <code className="text-amber-300 font-mono">nfs.nafisstore.com</code> هماهنگ شده است.
-            </p>
-            {downloadSuccess && (
-              <p className="text-xs text-emerald-400 font-bold flex items-center gap-1.5 pt-1">
-                <Check className="w-4 h-4" />
-                <span>فایل nafisstore-miniapp-dist.zip با موفقیت در سیستم شما دانلود شد!</span>
-              </p>
-            )}
-            {autoDeployStatus && (
-              <p className={`text-xs font-bold pt-1.5 flex items-center gap-1.5 ${autoDeployStatus.startsWith('✅') ? 'text-emerald-400' : 'text-amber-400'}`}>
-                <span>{autoDeployStatus}</span>
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto shrink-0 justify-end">
-          <button
-            type="button"
-            onClick={handleAutoDeploy}
-            disabled={isAutoDeploying}
-            className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 via-sky-600 to-emerald-600 hover:opacity-95 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg transition cursor-pointer disabled:opacity-50"
-            title="ارسال مستقیم آخرین نسخه برنامه به nfs.nafisstore.com بدون نیاز به ورود به سی‌پنل"
-          >
-            {isAutoDeploying ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin text-white" />
-                <span>در حال استقرار خودکار...</span>
-              </>
-            ) : (
-              <>
-                <Sparkles className="w-4 h-4 text-amber-300" />
-                <span>🚀 استقرار ۱-کلیکه به هاست (بدون سی‌پنل)</span>
-              </>
-            )}
-          </button>
-
-          <button
-            type="button"
-            onClick={handleDownloadZip}
-            disabled={isDownloading}
-            className="w-full sm:w-auto py-2.5 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-xs flex items-center justify-center gap-2 transition cursor-pointer disabled:opacity-50"
-            title="دانلود فایل فشرده جهت آرشیو یا آپلود دستی"
-          >
-            {isDownloading ? (
-              <>
-                <RefreshCw className="w-4 h-4 animate-spin text-slate-300" />
-                <span>در حال دانلود...</span>
-              </>
-            ) : (
-              <>
-                <Download className="w-4 h-4 text-emerald-400" />
-                <span>📥 دانلود dist.zip</span>
-              </>
-            )}
-          </button>
-
-          <a
-            href="https://nfs.nafisstore.com/api.php?action=updater_ui"
-            target="_blank"
-            rel="noreferrer"
-            className="py-2.5 px-3 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-sky-400 text-xs font-semibold flex items-center justify-center gap-1 transition cursor-pointer border border-sky-500/30 shrink-0"
-            title="باز کردن صفحه اختصاصی وب‌آپدیتر روی هاست"
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            <span>پنل وب آپلود</span>
-          </a>
-        </div>
-      </div>
-
       {/* Top Selector Card */}
       <div className="bg-slate-900/80 border border-slate-800 rounded-2xl p-4 sm:p-5 flex flex-col md:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-3 w-full md:w-auto">
@@ -495,17 +337,6 @@ ${tagsText}`;
             ))}
           </select>
 
-          {onImportFromSheets && (
-            <button
-              onClick={onImportFromSheets}
-              disabled={isSyncingSheets}
-              title="بارگذاری و همگام‌سازی کالاهای جدید از گوگل شیت"
-              className="flex items-center gap-1.5 px-3 py-2 bg-slate-800 hover:bg-slate-700 text-sky-300 border border-slate-700 rounded-xl text-xs font-semibold shrink-0 cursor-pointer disabled:opacity-50 transition"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingSheets ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">همگام‌سازی با شیت</span>
-            </button>
-          )}
         </div>
       </div>
 
@@ -1015,43 +846,6 @@ ${tagsText}`;
             {/* Explanation */}
             <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200/90 leading-relaxed">
               <span className="font-bold text-amber-300">💡 علت خطا چیست؟</span> تلگرام صفحات وب‌اپ را داخل محیط موبایل باز می‌کند. آدرسی که با <code className="font-mono text-amber-300">ais-dev</code> شروع می‌شود، یک محیط موقت و تحت احراز هویت داخلی گوگل است. برای اینکه مینی‌آپ تلگرام باز شود، تلگرام به یک آدرس اینترنتی عمومی HTTPS بدون نیاز به لاگین گوگل نیاز دارد.
-            </div>
-
-            {/* Download Bundle Action */}
-            <div className="bg-gradient-to-r from-sky-950/60 to-slate-900 border border-sky-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-lg">
-              <div className="space-y-1 text-right w-full sm:w-auto">
-                <div className="flex items-center gap-2 text-white font-bold text-sm">
-                  <Download className="w-4 h-4 text-sky-400" />
-                  <span>دانلود فایل سالم و مستقیم مینی‌آپ (نسخه بیلد شده dist.zip):</span>
-                </div>
-                <p className="text-xs text-slate-300">
-                  فایل مستقیماً در حافظه مرورگر ساخته می‌شود تا از خطای خراب بودن WinRAR جلوگیری شود.
-                </p>
-                {downloadSuccess && (
-                  <p className="text-[11px] text-emerald-400 font-bold flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>فایل nafisstore-miniapp-dist.zip با موفقیت و سلامت کامل دانلود شد!</span>
-                  </p>
-                )}
-              </div>
-              <button
-                type="button"
-                onClick={handleDownloadZip}
-                disabled={isDownloading}
-                className="w-full sm:w-auto shrink-0 py-2.5 px-4 rounded-xl bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-md transition cursor-pointer disabled:opacity-50"
-              >
-                {isDownloading ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin text-slate-950" />
-                    <span>در حال آماده‌سازی و دانلود...</span>
-                  </>
-                ) : (
-                  <>
-                    <Download className="w-4 h-4" />
-                    <span>دانلود مستقیم dist.zip (360 کیلوبایت)</span>
-                  </>
-                )}
-              </button>
             </div>
 
             {/* Actionable Ways for Cloudflare */}

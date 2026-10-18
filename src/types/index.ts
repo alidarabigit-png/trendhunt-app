@@ -44,6 +44,9 @@ export interface ProductItem {
   costPerUnitCny?: number;
   costPerUnitAed?: number;
   estimatedMarginPercent: number;
+  weightKg?: number;
+  routeType?: 'china_dubai_iran' | 'china_iran_direct' | 'dubai_iran';
+  customsPerKg?: number;
   supplier: SupplierInfo;
   isSyncedToSheets: boolean;
   syncedSheetRowId?: string;
