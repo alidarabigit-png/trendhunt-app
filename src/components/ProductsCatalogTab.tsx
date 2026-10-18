@@ -42,21 +42,15 @@ import { deduplicateProducts } from '../utils/catalogUtils';
 
 interface ProductsCatalogTabProps {
   products: ProductItem[];
-  onSyncProductToSheets: (product: ProductItem) => void;
-  onSyncAllToSheets: () => void;
   onSelectForTelegramPost: (product: ProductItem) => void;
   onSelectForMiniApp: (product: ProductItem) => void;
   onDeleteProduct: (productId: string) => void;
   onOpenWebStoreSync: (product: ProductItem) => void;
-  isSyncing: boolean;
   usdRate: number;
   currencyRates: CurrencyRates;
   selectedProduct?: ProductItem | null;
   onSelectProduct?: (p: ProductItem) => void;
   onUpdateProductPricing?: (p: ProductItem) => void;
-  onImportFromSheets?: () => void;
-  sheetsConfig?: { spreadsheetId: string | null; sheetTitle?: string };
-  onCleanDuplicates?: () => void;
   onUpdateProductImages?: (productId: string, newImages: string[], newMainImage: string) => void;
   onResetCatalogToMaster?: () => void;
   onSaveCatalogToCloud?: () => void;
@@ -67,21 +61,15 @@ interface ProductsCatalogTabProps {
 
 export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
   products,
-  onSyncProductToSheets,
-  onSyncAllToSheets,
   onSelectForTelegramPost,
   onSelectForMiniApp,
   onDeleteProduct,
   onOpenWebStoreSync,
-  isSyncing,
   usdRate,
   currencyRates,
   selectedProduct,
   onSelectProduct,
   onUpdateProductPricing,
-  onImportFromSheets,
-  sheetsConfig,
-  onCleanDuplicates,
   onUpdateProductImages,
   onResetCatalogToMaster,
   onSaveCatalogToCloud,
@@ -178,52 +166,6 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
 
   return (
     <div className="space-y-6">
-      {/* Google Sheets Sync Banner */}
-      {sheetsConfig?.spreadsheetId && (
-        <div className="bg-gradient-to-r from-emerald-950/60 via-slate-900 to-indigo-950/60 border border-emerald-500/40 rounded-2xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-lg">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-500/30">
-              <FileSpreadsheet className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
-                <span>همگام‌سازی مستقیم با گوگل شیت اختصاصی درایو</span>
-                <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-500/30">
-                  {products.length} کالا در برنامه
-                </span>
-              </h4>
-              <p className="text-[11px] text-slate-300">
-                اگر در گوگل شیت کالاهای جدیدتری ثبت کرده‌اید یا تعداد اقلام بیشتر است، با زدن دکمه مقابل همه 13 محصول را در کاتالوگ و مینی‌آپ بارگذاری کنید.
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {onCleanDuplicates && (
-              <button
-                onClick={onCleanDuplicates}
-                disabled={isSyncing}
-                className="flex items-center gap-1.5 bg-amber-500/20 hover:bg-amber-500/35 text-amber-300 border border-amber-500/40 px-3.5 py-2.5 rounded-xl text-xs font-bold transition cursor-pointer disabled:opacity-50"
-                title="بررسی و حذف ردیف‌های تکراری و یکتا کردن فایل گوگل شیت"
-              >
-                <Trash2 className="w-4 h-4 text-amber-400" />
-                <span>🧹 حذف تکراری‌های شیت</span>
-              </button>
-            )}
-
-            {onImportFromSheets && (
-              <button
-                onClick={onImportFromSheets}
-                disabled={isSyncing}
-                className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-2.5 rounded-xl text-xs font-bold shadow-lg shadow-emerald-700/30 transition disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={`w-4 h-4 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>فراخوانی و بارگذاری از شیت</span>
-              </button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Controls & Filter Bar */}
       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 sm:p-5 space-y-4 shadow-lg">
@@ -251,17 +193,6 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
-            {sheetsConfig?.spreadsheetId && onImportFromSheets && (
-              <button
-                onClick={onImportFromSheets}
-                disabled={isSyncing}
-                title="خواندن و بارگذاری همه کالاهای ثبت‌شده در گوگل شیت درایو"
-                className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3.5 py-2 rounded-xl text-xs font-bold shadow-md shadow-indigo-600/20 transition disabled:opacity-50 cursor-pointer"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
-                <span>فراخوانی از شیت</span>
-              </button>
-            )}
 
             <button
               onClick={() => exportProductsToCSV(products)}
@@ -337,14 +268,6 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
               </button>
             )}
 
-            <button
-              onClick={onSyncAllToSheets}
-              disabled={isSyncing || products.length === 0}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold shadow-md shadow-emerald-600/20 transition disabled:opacity-50 cursor-pointer"
-            >
-              <FileSpreadsheet className="w-4 h-4" />
-              <span>ارسال همه به گوگل شیت</span>
-            </button>
           </div>
         </div>
 
@@ -533,12 +456,6 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
                           </span>
                         )}
 
-                        {product.isSyncedToSheets && (
-                          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-600/30 text-emerald-200 border border-emerald-400/40 flex items-center gap-1 mr-auto">
-                            <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                            ثبت در گوگل شیت
-                          </span>
-                        )}
                       </div>
 
                       {/* Persian SEO Title */}
@@ -605,15 +522,6 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
                           <span>پست تلگرام</span>
                         </button>
 
-                        <button
-                          onClick={() => onSyncProductToSheets(product)}
-                          disabled={isSyncing}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/40 text-emerald-300 border border-emerald-500/30 text-xs font-semibold transition cursor-pointer"
-                          title="ارسال تکی به گوگل شیت در درایو"
-                        >
-                          <FileSpreadsheet className="w-3.5 h-3.5" />
-                          <span>گوگل شیت</span>
-                        </button>
 
                         <button
                           onClick={() => onOpenWebStoreSync(product)}

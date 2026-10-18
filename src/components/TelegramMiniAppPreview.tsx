@@ -152,9 +152,6 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   );
 
   // Admin PIN Protection states
-  const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
-  const [adminPinInput, setAdminPinInput] = useState('');
-  const [adminPinError, setAdminPinError] = useState('');
 
   const cleanProducts = React.useMemo(() => deduplicateProducts(products), [products]);
 
@@ -567,13 +564,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   <button
                     onClick={() => {
                       setIsMiniAppDrawerOpen(false);
-                      if (sessionStorage.getItem('nfs_admin_auth') === 'true') {
-                        onSwitchToAdmin();
-                      } else {
-                        setIsAdminPinModalOpen(true);
-                        setAdminPinInput('');
-                        setAdminPinError('');
-                      }
+                      onSwitchToAdmin();
                     }}
                     className="w-full flex items-center justify-between p-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold text-xs transition cursor-pointer"
                   >
@@ -1185,83 +1176,6 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
           </div>
   );
 
-  const renderAdminPinModal = () => {
-    if (!isAdminPinModalOpen) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-        <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 text-right">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
-                <Lock className="w-4 h-4" />
-              </div>
-              <h3 className="text-sm font-bold text-white">ورود به پنل مدیریت بازرگانی</h3>
-            </div>
-            <button
-              onClick={() => setIsAdminPinModalOpen(false)}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-
-          <p className="text-xs text-slate-400 leading-relaxed">
-            این بخش ویژه مدیریت بازرگانی نفیس‌استور است. لطفاً رمز عبور مدیریت را وارد کنید:
-          </p>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const pin = adminPinInput.trim();
-              if (pin === 'nfs2026' || pin === '1234' || pin === 'admin') {
-                sessionStorage.setItem('nfs_admin_auth', 'true');
-                setIsAdminPinModalOpen(false);
-                if (onSwitchToAdmin) onSwitchToAdmin();
-              } else {
-                setAdminPinError('رمز عبور مدیریت اشتباه است. (رمز پیش‌فرض: nfs2026)');
-              }
-            }}
-            className="space-y-3"
-          >
-            <div>
-              <input
-                type="password"
-                autoFocus
-                placeholder="رمز عبور مدیریت (پیش‌فرض: nfs2026)"
-                value={adminPinInput}
-                onChange={(e) => {
-                  setAdminPinInput(e.target.value);
-                  setAdminPinError('');
-                }}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-center text-sm font-mono text-white tracking-widest focus:outline-none focus:border-amber-400"
-              />
-              {adminPinError && (
-                <p className="text-[11px] text-rose-400 pt-1.5 text-center font-medium">
-                  {adminPinError}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition cursor-pointer shadow-md"
-              >
-                ورود به پنل ادمین
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAdminPinModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
-              >
-                انصراف
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    );
-  };
 
   if (isStandalone) {
     return (
@@ -1275,13 +1189,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
           {onSwitchToAdmin && (
             <button
               onClick={() => {
-                if (sessionStorage.getItem('nfs_admin_auth') === 'true') {
-                  onSwitchToAdmin();
-                } else {
-                  setIsAdminPinModalOpen(true);
-                  setAdminPinInput('');
-                  setAdminPinError('');
-                }
+                onSwitchToAdmin();
               }}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold transition cursor-pointer text-[11px]"
               title="ورود به پنل شکار کالا، کاتالوگ و تنظیمات"
@@ -1293,7 +1201,6 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
         </div>
 
         {renderScreenContent()}
-        {renderAdminPinModal()}
       </div>
     );
   }
@@ -1408,7 +1315,6 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
       </div>
 
       {/* Admin PIN Verification Modal */}
-      {renderAdminPinModal()}
     </div>
   );
 };

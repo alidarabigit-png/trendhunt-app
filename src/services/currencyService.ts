@@ -24,60 +24,7 @@ export async function fetchLiveExchangeRates(source: string = 'TGJU'): Promise<C
     hour12: false,
   });
 
-  // 1. Direct Live TGJU Query via Scraper Relay Worker
-  try {
-    const workerUrl = 'https://scraper-relay.udur4313fftao3q8a0kdkd2wg-me.workers.dev/?url=' +
-      encodeURIComponent('https://call.tgju.org/ajax.json');
-
-    const tgjuController = new AbortController();
-    const timeoutId = setTimeout(() => tgjuController.abort(), 6000);
-
-    const tgjuRes = await fetch(workerUrl, {
-      headers: {
-        'X-Relay-Token': 'alidarabi05@gmail.com',
-      },
-      signal: tgjuController.signal,
-    });
-    clearTimeout(timeoutId);
-
-    if (tgjuRes.ok) {
-      const liveData = await tgjuRes.json();
-      const current = liveData?.current || {};
-
-      const rawUsd = current.price_dollar_rl?.p || current.usd_sell?.p || current.price_dollar?.p;
-      const rawAed = current.price_aed?.p || current.aed_sell?.p;
-      const rawCny = current.price_cny?.p || current.cny_sell?.p;
-
-      if (rawUsd) {
-        const usdRial = Number(String(rawUsd).replace(/,/g, ''));
-        const aedRial = rawAed ? Number(String(rawAed).replace(/,/g, '')) : 0;
-        const cnyRial = rawCny ? Number(String(rawCny).replace(/,/g, '')) : 0;
-
-        if (usdRial > 100000) {
-          const usd = Math.round(usdRial / 10);
-          const aed = aedRial > 10000 ? Math.round(aedRial / 10) : Math.round(usd / 3.67);
-          const cny = cnyRial > 10000 ? Math.round(cnyRial / 10) : Math.round(usd / 7.1);
-
-          const freshRates: CurrencyRates = {
-            usd,
-            aed,
-            cny,
-            lastUpdated: timeStringEn,
-            source: 'شبکه اطلاع‌رسانی طلا و ارز (TGJU زنده)',
-            isAutoUpdate: true,
-            updateIntervalMinutes: 1,
-          };
-
-          // Persist to host server silently
-          saveCustomRatesToServer(usd, aed, cny).catch(() => {});
-          return freshRates;
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Direct TGJU fetch failed, falling back to server endpoints:', err);
-  }
-
+  // نرخ زنده روی هاست (api.php) از TGJU گرفته می‌شود؛ مرورگر مستقیم به Worker وصل نمی‌شود
   // 2. Server Endpoints (/api/currency-rates or api.php)
   const isPhpHost = typeof window !== 'undefined' && (
     window.location.hostname.includes('nafisstore.com') ||

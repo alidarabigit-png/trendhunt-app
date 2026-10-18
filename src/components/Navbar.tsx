@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
-import { User } from 'firebase/auth';
 import {
   Bot,
   Package,
   Smartphone,
   Send,
   FileSpreadsheet,
-  Workflow,
   LogOut,
   RefreshCw,
   Coins,
@@ -28,15 +26,10 @@ import { NfsLogo } from './NfsLogo';
 interface NavbarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  user: User | null;
-  onLogin: () => void;
-  onLogout: () => void;
-  isLoggingIn: boolean;
   currencyRates: CurrencyRates;
   onRefreshRates: () => void;
   isRefreshingRates: boolean;
   productsCount: number;
-  syncedSheetsCount: number;
   pendingInquiriesCount: number;
   pendingCustomersCount: number;
   onOpenManualIngest: () => void;
@@ -51,15 +44,10 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   activeTab,
   setActiveTab,
-  user,
-  onLogin,
-  onLogout,
-  isLoggingIn,
   currencyRates,
   onRefreshRates,
   isRefreshingRates,
   productsCount,
-  syncedSheetsCount,
   pendingInquiriesCount,
   pendingCustomersCount,
   onOpenManualIngest,
@@ -91,8 +79,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       badge: currentCustomer?.status === 'approved' ? 'تایید شده' : 'در انتظار',
       badgeColor: currentCustomer?.status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950',
     },
-    { id: 'sheets', label: 'گوگل شیت و درایو', icon: FileSpreadsheet, badge: syncedSheetsCount > 0 ? `${syncedSheetsCount} ثبت` : undefined },
-    { id: 'automation', label: 'راهنمای اتوماسیون 100%', icon: Workflow },
   ];
 
   const handleTabClick = (tabId: string) => {
@@ -215,47 +201,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
 
               {/* Google Account Status Button */}
-              {user ? (
-                <div className="flex items-center gap-2 bg-slate-800/90 pl-2 pr-2 sm:pr-3 py-1.5 rounded-xl border border-slate-700">
-                  {user.photoURL ? (
-                    <img src={user.photoURL} alt={user.displayName || 'کاربر'} className="w-6 h-6 rounded-full border border-emerald-400" />
-                  ) : (
-                    <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">
-                      G
-                    </div>
-                  )}
-                  <div className="hidden xl:block text-right">
-                    <div className="text-xs font-medium text-slate-200 truncate max-w-[100px]">
-                      {user.displayName || user.email}
-                    </div>
-                  </div>
-                  <button
-                    onClick={onLogout}
-                    title="خروج از حساب گوگل"
-                    className="p-1 rounded-lg hover:bg-slate-700 text-slate-400 hover:text-rose-400 transition"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <button
-                  onClick={onLogin}
-                  disabled={isLoggingIn}
-                  className="flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-800 px-3 py-1.5 rounded-xl font-medium text-xs shadow-md transition disabled:opacity-50 cursor-pointer"
-                >
-                  {isLoggingIn ? (
-                    <RefreshCw className="w-4 h-4 animate-spin text-indigo-600" />
-                  ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 48 48">
-                      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-                    </svg>
-                  )}
-                  <span className="hidden sm:inline">اتصال به Drive</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -465,45 +410,6 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Drawer Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/60">
-          {user ? (
-            <div className="flex items-center justify-between bg-slate-900 p-2.5 rounded-xl border border-slate-800">
-              <div className="flex items-center gap-2 min-w-0">
-                {user.photoURL ? (
-                  <img src={user.photoURL} alt="" className="w-7 h-7 rounded-full border border-emerald-400" />
-                ) : (
-                  <div className="w-7 h-7 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-xs font-bold">
-                    G
-                  </div>
-                )}
-                <div className="truncate text-xs text-slate-300">
-                  <div className="font-bold truncate">{user.displayName || user.email}</div>
-                  <div className="text-[10px] text-emerald-400">اتصال به درایو فعال است</div>
-                </div>
-              </div>
-
-              <button
-                onClick={onLogout}
-                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-rose-400 transition"
-                title="خروج"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onLogin}
-              disabled={isLoggingIn}
-              className="w-full flex items-center justify-center gap-2 py-2.5 bg-white hover:bg-slate-100 text-slate-900 rounded-xl font-bold text-xs shadow-md transition"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 48 48">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-                <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-              </svg>
-              <span>ورود با حساب گوگل</span>
-            </button>
-          )}
         </div>
       </aside>
     </>

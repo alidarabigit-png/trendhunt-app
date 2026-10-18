@@ -9,3 +9,8 @@ coverage/
 node_modules
 .env
 dist.zip
+
+# داده‌های زنده‌ی هاست (در گیت‌هاب نگهداری نمی‌شوند)
+data/
+public/data/
+public/uploads/

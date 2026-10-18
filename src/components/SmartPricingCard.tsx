@@ -40,8 +40,12 @@ export const SmartPricingCard: React.FC<SmartPricingCardProps> = ({
   // Selected base currency for land cost calculation
   const [selectedCurrency, setSelectedCurrency] = useState<'USD' | 'AED' | 'CNY'>('USD');
 
-  // Estimated shipping & customs clearance percentage (default 12%)
-  const [shippingPercent, setShippingPercent] = useState<number>(12);
+  // Weight-based cargo & customs inputs (saved per product)
+  const [weightKg, setWeightKg] = useState<number>(product.weightKg || 1);
+  const [routeType, setRouteType] = useState<'china_dubai_iran' | 'china_iran_direct' | 'dubai_iran'>(
+    product.routeType || 'china_dubai_iran'
+  );
+  const [customsPerKg] = useState<number>(product.customsPerKg || 700000);
 
   // Temporary live rate override (in case user wants to simulate currency surge)
   const [activeRate, setActiveRate] = useState<number>(currencyRates.usd);
@@ -65,14 +69,25 @@ export const SmartPricingCard: React.FC<SmartPricingCardProps> = ({
 
   // Base purchase cost in foreign currency
   const baseCostForeign = useMemo(() => {
-    if (selectedCurrency === 'USD') return product.costPerUnitUsd;
-    if (selectedCurrency === 'CNY') return product.costPerUnitCny || Number((product.costPerUnitUsd * 7.24).toFixed(1));
-    return product.costPerUnitAed || Number((product.costPerUnitUsd * 3.67).toFixed(1));
+    const usd = Number(product.costPerUnitUsd) || 0;
+    if (selectedCurrency === 'USD') return usd;
+    if (selectedCurrency === 'CNY') return Number(product.costPerUnitCny) || Number((usd * 7.24).toFixed(1));
+    return Number(product.costPerUnitAed) || Number((usd * 3.67).toFixed(1));
   }, [product, selectedCurrency]);
 
   // Land Cost calculations in Iranian Toman
   const rawCostToman = Math.round(baseCostForeign * activeRate);
-  const shippingCostToman = Math.round(rawCostToman * (shippingPercent / 100));
+  const shippingCostToman = useMemo(() => {
+    const w = Math.max(0.1, weightKg);
+    const cargo =
+      routeType === 'china_dubai_iran'
+        ? w * 48 * currencyRates.aed
+        : routeType === 'china_iran_direct'
+          ? w * 55 * currencyRates.cny
+          : w * 20 * currencyRates.aed;
+    const customs = w * customsPerKg;
+    return Math.round(cargo + customs);
+  }, [weightKg, routeType, customsPerKg, currencyRates]);
   const totalLandCostToman = rawCostToman + shippingCostToman;
 
   // Calculated Smart Tiered Prices
@@ -164,6 +179,9 @@ export const SmartPricingCard: React.FC<SmartPricingCardProps> = ({
       ...product,
       tieredPricing: newTieredPricing,
       estimatedMarginPercent: targetMargin,
+      weightKg,
+      routeType,
+      customsPerKg,
     };
 
     onApplyPricing(updated);
@@ -175,6 +193,12 @@ export const SmartPricingCard: React.FC<SmartPricingCardProps> = ({
     <div className="relative rounded-3xl bg-slate-900 border border-slate-800 p-5 sm:p-7 shadow-2xl space-y-6 transition-all">
       {/* Ambient Top Glow */}
       <div className="absolute top-0 right-1/4 w-80 h-32 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+
+      {!(baseCostForeign > 0) && (
+        <div className="relative p-3 rounded-xl text-xs bg-rose-900/40 text-rose-200 border border-rose-500/40">
+          قیمت خرید این محصول ثبت نشده است؛ محاسبه قیمت انجام نمی‌شود. ابتدا قیمت خرید را در کاتالوگ ثبت کنید.
+        </div>
+      )}
 
       {/* Header Row */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800/80">
@@ -316,24 +340,40 @@ export const SmartPricingCard: React.FC<SmartPricingCardProps> = ({
           <div className="flex items-center justify-between text-xs">
             <span className="font-semibold text-slate-300 flex items-center gap-1.5">
               <Truck className="w-4 h-4 text-sky-400" />
-              <span>کارگو، حمل و ترخیص</span>
+              <span>کارگو و ترخیص وزنی</span>
             </span>
-            <span className="font-mono text-sky-400 font-bold text-xs">{shippingPercent}%</span>
+            <span className="font-mono text-sky-400 font-bold text-xs">{weightKg} kg</span>
           </div>
 
-          <input
-            type="range"
-            min={5}
-            max={30}
-            step={1}
-            value={shippingPercent}
-            onChange={(e) => setShippingPercent(Number(e.target.value))}
-            className="w-full accent-sky-500 cursor-pointer"
-          />
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-[10px] text-slate-400 block mb-1">وزن ناخالص (کیلوگرم):</label>
+              <input
+                type="number"
+                step="0.1"
+                min="0.1"
+                value={weightKg}
+                onChange={(e) => setWeightKg(Math.max(0.1, parseFloat(e.target.value) || 1))}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] text-white font-mono"
+              />
+            </div>
+            <div>
+              <label className="text-[10px] text-slate-400 block mb-1">مسیر حمل هوایی:</label>
+              <select
+                value={routeType}
+                onChange={(e) => setRouteType(e.target.value as typeof routeType)}
+                className="w-full bg-slate-900 border border-slate-800 rounded-lg px-2 py-1.5 text-[11px] text-white"
+              >
+                <option value="china_dubai_iran">چین ➔ دبی ➔ ایران (۴۸ درهم)</option>
+                <option value="china_iran_direct">مستقیم چین ➔ ایران (۵۵ یوان)</option>
+                <option value="dubai_iran">فقط دبی ➔ ایران (۲۰ درهم)</option>
+              </select>
+            </div>
+          </div>
 
           <div className="space-y-1.5 text-xs pt-1">
             <div className="flex items-center justify-between">
-              <span className="text-slate-400 text-[11px]">هزینه حمل برآوردی:</span>
+              <span className="text-slate-400 text-[11px]">هزینه کارگو + ترخیص:</span>
               <span className="font-mono text-slate-300 text-[11px]">
                 {shippingCostToman.toLocaleString('en-US')} تومان
               </span>
@@ -516,7 +556,7 @@ export const SmartPricingCard: React.FC<SmartPricingCardProps> = ({
             ) : (
               <>
                 <CheckCircle2 className="w-4 h-4 fill-slate-950" />
-                <span>اعمال این قیمت‌ها روی کاتالوگ و شیت</span>
+                <span>اعمال این قیمت‌ها روی کاتالوگ</span>
               </>
             )}
           </button>

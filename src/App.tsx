@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { User } from 'firebase/auth';
 import { Navbar } from './components/Navbar';
+import { ManualProductIngestModal } from './components/ManualProductIngestModal';
 import { SourcingAgentTab } from './components/SourcingAgentTab';
 import { ProductsCatalogTab } from './components/ProductsCatalogTab';
 import { TelegramMiniAppPreview } from './components/TelegramMiniAppPreview';
 import { TelegramPostGeneratorTab } from './components/TelegramPostGeneratorTab';
-import { GoogleSheetsTab } from './components/GoogleSheetsTab';
-import { AutomationGuideTab } from './components/AutomationGuideTab';
 import { AdminPanelTab } from './components/AdminPanelTab';
 import { CustomerPortalTab } from './components/CustomerPortalTab';
-import { ManualProductIngestModal } from './components/ManualProductIngestModal';
 import { WebStoreSyncModal } from './components/WebStoreSyncModal';
 import {
   ProductItem,
   SourcingSettings,
-  GoogleSheetsConfig,
   TelegramConfig,
   CurrencyRates,
   CustomerUser,
@@ -26,19 +22,9 @@ import { INITIAL_PRODUCTS } from './data/sampleProducts';
 import { INITIAL_CUSTOMERS, INITIAL_INQUIRIES, DEFAULT_CUSTOMER } from './data/sampleCustomers';
 import { DEFAULT_RATES, fetchLiveExchangeRates, saveCustomRatesToServer } from './services/currencyService';
 import { initAuth, googleSignIn, logout } from './services/firebaseAuth';
-import {
-  createWholesaleSpreadsheet,
-  appendProductsToSheet,
-  readProductsFromSheet,
-  cleanDuplicatesInSheet,
-  extractSpreadsheetId,
-} from './services/googleSheets';
 import { CurrencyRatesModal } from './components/CurrencyRatesModal';
-import { SheetCleanerModal } from './components/SheetCleanerModal';
-import { DeployModal } from './components/DeployModal';
 import { HostMediaUploadModal } from './components/HostMediaUploadModal';
 import { deduplicateProducts, filterNewProducts } from './utils/catalogUtils';
-import { runAutomatedSourcingHunt } from './services/geminiSourcing';
 
 export default function App() {
   const [viewMode, setViewMode] = useState<'miniapp' | 'admin'>(() => {
@@ -59,8 +45,7 @@ export default function App() {
   });
 
   const [activeTab, setActiveTab] = useState<string>('agent');
-  const [user, setUser] = useState<User | null>(null);
-  const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
+  const [isManualIngestOpen, setIsManualIngestOpen] = useState<boolean>(false);
 
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
     const saved = localStorage.getItem('nfs_theme');
@@ -179,8 +164,6 @@ export default function App() {
   }, [products]);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isManualIngestOpen, setIsManualIngestOpen] = useState(false);
-  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isMediaUploadModalOpen, setIsMediaUploadModalOpen] = useState(false);
 
   const handleAddImageToProduct = (productId: string, imageUrl: string) => {
@@ -244,6 +227,14 @@ export default function App() {
               headers,
               cache: 'no-store',
             });
+            if (res.status === 401 && adminKey) {
+              try {
+                sessionStorage.removeItem('nfs_admin_key');
+              } catch (e) {}
+              window.alert('کلید ادمین نادرست است. دوباره وارد کنید.');
+              window.location.reload();
+              return;
+            }
             if (res.ok) {
               const data = await res.json();
               if (Array.isArray(data.products) && data.products.length > 0) {
@@ -363,33 +354,6 @@ export default function App() {
     return DEFAULT_CUSTOMER;
   });
 
-  const handleClearDemoData = () => {
-    setCustomers([]);
-    setInquiries([]);
-    const blankCustomer: CustomerUser = {
-      id: 'USR-' + Math.floor(1000 + Math.random() * 9000),
-      name: 'کاربر مهمان',
-      companyName: '',
-      telegramUsername: '',
-      phone: '',
-      city: 'تهران',
-      role: 'customer',
-      status: 'pending',
-      requestedAt: new Date().toLocaleDateString('en-US'),
-      tier: 'همکار برنزی',
-      totalOrdersCount: 0,
-    };
-    setCurrentCustomer(blankCustomer);
-    try {
-      localStorage.setItem('nfs_crm_customers', JSON.stringify([]));
-      localStorage.setItem('nfs_crm_inquiries', JSON.stringify([]));
-      localStorage.setItem('nfs_current_customer', JSON.stringify(blankCustomer));
-      const isPhpHost = window.location.hostname.includes('nafisstore.com') || window.location.pathname.includes('.php');
-      const endpoint = isPhpHost ? '/api.php?action=clean_sample_crm' : '/api/crm/clean';
-      fetch(endpoint, { method: 'POST' }).catch(() => {});
-    } catch (e) {}
-    showToast('داده‌های نمونه، مشتریان و استعلام‌ها پاکسازی شدند.');
-  };
 
   const [settings, setSettingsState] = useState<SourcingSettings>(() => {
     try {
@@ -452,65 +416,8 @@ export default function App() {
     });
   };
 
-  // ۲) غیرفعال کردن شکارچی مرورگر
-  useEffect(() => {
-    if (true) return; // شکار روزانه حالا روی GitHub Actions اجرا می‌شه
-    const checkAndRunDailyScheduler = async () => {
-      const now = new Date();
-      const currentHour = String(now.getHours()).padStart(2, '0');
-      const currentMin = String(now.getMinutes()).padStart(2, '0');
-      const currentTime = `${currentHour}:${currentMin}`;
-      const todayString = now.toISOString().split('T')[0];
-      const scheduledTime = settings.autoScheduleTime || '08:00';
 
-      if (currentTime >= scheduledTime && settings.lastAutoRunDate !== todayString) {
-        setSettings((prev) => ({ ...prev, lastAutoRunDate: todayString }));
-        try {
-          const freshHunted = await runAutomatedSourcingHunt(
-            { ...settings, usdToTomanRate: currencyRates.usd },
-            () => {},
-            products
-          );
-          if (freshHunted.length > 0) {
-            handleNewProductsFound(freshHunted);
-          }
-        } catch (err) {}
-      }
-    };
 
-    checkAndRunDailyScheduler();
-    const timer = setInterval(checkAndRunDailyScheduler, 30000);
-    return () => clearInterval(timer);
-  }, [settings.autoScheduleEnabled, settings.autoScheduleTime, settings.lastAutoRunDate, products, currencyRates.usd]);
-
-  const [sheetsConfig, setSheetsConfigState] = useState<GoogleSheetsConfig>(() => {
-    try {
-      const saved = localStorage.getItem('nfs_sheets_config');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return {
-      spreadsheetId: null,
-      spreadsheetUrl: null,
-      sheetTitle: 'کالاهای ترند عمده‌فروشی تلگرام',
-      lastSyncedAt: null,
-      totalSyncedCount: 0,
-    };
-  });
-
-  const setSheetsConfig = (
-    value: GoogleSheetsConfig | ((prev: GoogleSheetsConfig) => GoogleSheetsConfig)
-  ) => {
-    setSheetsConfigState((prev) => {
-      const next = typeof value === 'function' ? value(prev) : value;
-      try {
-        localStorage.setItem('nfs_sheets_config', JSON.stringify(next));
-      } catch (e) {}
-      return next;
-    });
-  };
-
-  const [isCreatingSheet, setIsCreatingSheet] = useState(false);
-  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
 
   const [telegramConfig, setTelegramConfigState] = useState<TelegramConfig>(() => {
     try {
@@ -575,7 +482,6 @@ export default function App() {
   const [isWebStoreModalOpen, setIsWebStoreModalOpen] = useState(false);
   const [webStoreSyncProduct, setWebStoreSyncProduct] = useState<ProductItem | null>(null);
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
-  const [isSheetCleanerOpen, setIsSheetCleanerOpen] = useState(false);
 
   const [miniAppNotifications, setMiniAppNotifications] = useState<MiniAppNotification[]>([]);
 
@@ -669,15 +575,6 @@ export default function App() {
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = initAuth(
-      (currentUser) => setUser(currentUser),
-      () => setUser(null)
-    );
-    return () => {
-      if (typeof unsubscribe === 'function') unsubscribe();
-    };
-  }, []);
 
   // ۳) شرط viewMode !== 'admin' برای افکت تغییر قیمت
   useEffect(() => {
@@ -693,129 +590,12 @@ export default function App() {
     );
   }, [currencyRates.usd, settings.targetMarginPercent, viewMode]);
 
-  const handleLogin = async () => {
-    setIsLoggingIn(true);
-    try {
-      const res = await googleSignIn();
-      if (res) setUser(res.user);
-    } catch (err) {
-      showToast('خطا در ورود به حساب گوگل.');
-    } finally {
-      setIsLoggingIn(false);
-    }
-  };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      setUser(null);
-    } catch (err) {}
-  };
 
-  const handleCreateNewSheet = async () => {
-    if (!user) {
-      handleLogin();
-      return;
-    }
-    setIsCreatingSheet(true);
-    try {
-      const res = await createWholesaleSpreadsheet();
-      setSheetsConfig({
-        spreadsheetId: res.spreadsheetId,
-        spreadsheetUrl: res.spreadsheetUrl,
-        sheetTitle: res.title,
-        lastSyncedAt: new Date().toLocaleTimeString('en-US'),
-        totalSyncedCount: 0,
-      });
-      await appendProductsToSheet(res.spreadsheetId, products);
-      setProducts((prev) => prev.map((p) => ({ ...p, isSyncedToSheets: true })));
-      showToast('✅ شیت ایجاد شد.');
-    } catch (err: any) {
-      showToast('خطا در ایجاد شیت.');
-    } finally {
-      setIsCreatingSheet(false);
-    }
-  };
 
-  const handleSyncProductToSheets = async (product: ProductItem) => {
-    if (!user) {
-      setActiveTab('sheets');
-      return;
-    }
-    setIsSyncingSheets(true);
-    try {
-      let targetId = sheetsConfig.spreadsheetId;
-      if (!targetId) {
-        const newSheet = await createWholesaleSpreadsheet();
-        targetId = newSheet.spreadsheetId;
-        setSheetsConfig({
-          spreadsheetId: newSheet.spreadsheetId,
-          spreadsheetUrl: newSheet.spreadsheetUrl,
-          sheetTitle: newSheet.title,
-          lastSyncedAt: new Date().toLocaleTimeString('en-US'),
-          totalSyncedCount: 1,
-        });
-      }
-      await appendProductsToSheet(targetId, [product]);
-      setProducts((prev) => prev.map((p) => (p.id === product.id ? { ...p, isSyncedToSheets: true } : p)));
-      showToast('محصول در شیت ذخیره شد.');
-    } catch (err: any) {
-      showToast('خطا در همگام‌سازی محصول.');
-    } finally {
-      setIsSyncingSheets(false);
-    }
-  };
 
-  const handleSyncAllToSheets = async () => {
-    if (!user) {
-      setActiveTab('sheets');
-      return;
-    }
-    setIsSyncingSheets(true);
-    try {
-      let targetId = sheetsConfig.spreadsheetId;
-      if (!targetId) {
-        const newSheet = await createWholesaleSpreadsheet();
-        targetId = newSheet.spreadsheetId;
-        setSheetsConfig({
-          spreadsheetId: newSheet.spreadsheetId,
-          spreadsheetUrl: newSheet.spreadsheetUrl,
-          sheetTitle: newSheet.title,
-          lastSyncedAt: new Date().toLocaleTimeString('en-US'),
-          totalSyncedCount: products.length,
-        });
-      }
-      const res = await appendProductsToSheet(targetId, products);
-      setProducts((prev) => prev.map((p) => ({ ...p, isSyncedToSheets: true })));
-      showToast(`تعداد ${res.updatedRows} محصول در شیت درج شد.`);
-    } catch (err: any) {
-      showToast('خطا در ذخیره در شیت.');
-    } finally {
-      setIsSyncingSheets(false);
-    }
-  };
 
-  const handleCleanSheetDuplicates = () => {
-    if (!user || !sheetsConfig.spreadsheetId) return;
-    setIsSheetCleanerOpen(true);
-  };
 
-  const handleImportFromSheet = async (showNotification = true) => {
-    if (!sheetsConfig.spreadsheetId) return;
-    setIsSyncingSheets(true);
-    try {
-      const items = await readProductsFromSheet(sheetsConfig.spreadsheetId, currencyRates.usd);
-      if (items.length > 0) {
-        setProducts(items);
-        setSelectedProduct(items[0] || null);
-        if (showNotification) showToast(`تعداد ${items.length} کالا از شیت بارگذاری شد.`);
-      }
-    } catch (err: any) {
-      if (showNotification) showToast('خطا در خواندن اطلاعات از شیت.');
-    } finally {
-      setIsSyncingSheets(false);
-    }
-  };
 
   const handleUpdateProductImages = (
     productId: string,
@@ -1044,15 +824,10 @@ export default function App() {
       <Navbar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        user={user}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
-        isLoggingIn={isLoggingIn}
         currencyRates={currencyRates}
         onRefreshRates={() => handleRefreshRates(true)}
         isRefreshingRates={isRefreshingRates}
         productsCount={products.length}
-        syncedSheetsCount={(products || []).filter((p) => p?.isSyncedToSheets).length}
         pendingInquiriesCount={(inquiries || []).filter((i) => i?.status === 'pending_review').length}
         pendingCustomersCount={(customers || []).filter((c) => c?.status === 'pending').length}
         onOpenManualIngest={() => setIsManualIngestOpen(true)}
@@ -1061,7 +836,16 @@ export default function App() {
         theme={theme}
         onToggleTheme={toggleTheme}
         onSwitchToMiniApp={() => setViewMode('miniapp')}
-        onOpenDeployModal={() => setIsDeployModalOpen(true)}
+      />
+
+      <ManualProductIngestModal
+        isOpen={isManualIngestOpen}
+        onClose={() => setIsManualIngestOpen(false)}
+        onAddProduct={(newProd) => {
+          handleNewProductsFound([newProd]);
+        }}
+        currencyRates={currencyRates}
+        targetMarginPercent={settings.targetMarginPercent}
       />
 
       {pendingExtensionProducts.length > 0 && (
@@ -1094,11 +878,10 @@ export default function App() {
           />
         )}
 
+
         {activeTab === 'catalog' && (
           <ProductsCatalogTab
             products={products}
-            onSyncProductToSheets={handleSyncProductToSheets}
-            onSyncAllToSheets={handleSyncAllToSheets}
             onSelectForTelegramPost={(p) => {
               setSelectedProduct(p);
               setActiveTab('telegram');
@@ -1112,15 +895,11 @@ export default function App() {
               setWebStoreSyncProduct(p);
               setIsWebStoreModalOpen(true);
             }}
-            isSyncing={isSyncingSheets}
             usdRate={currencyRates.usd}
             currencyRates={currencyRates}
             selectedProduct={selectedProduct}
             onSelectProduct={setSelectedProduct}
             onUpdateProductPricing={handleUpdateProductPricing}
-            onImportFromSheets={() => handleImportFromSheet(true)}
-            sheetsConfig={sheetsConfig}
-            onCleanDuplicates={handleCleanSheetDuplicates}
             onUpdateProductImages={handleUpdateProductImages}
             onResetCatalogToMaster={handleResetCatalogToMaster}
             onSaveCatalogToCloud={handleSaveCatalogToCloud}
@@ -1156,8 +935,6 @@ export default function App() {
             telegramConfig={telegramConfig}
             setTelegramConfig={setTelegramConfig}
             usdRate={currencyRates.usd}
-            onImportFromSheets={() => handleImportFromSheet(true)}
-            isSyncingSheets={isSyncingSheets}
             onUpdateProductImages={handleUpdateProductImages}
           />
         )}
@@ -1169,7 +946,6 @@ export default function App() {
             onRejectCustomer={handleRejectCustomer}
             inquiries={inquiries}
             onReplyToInquiry={handleReplyToInquiry}
-            onClearDemoData={handleClearDemoData}
           />
         )}
 
@@ -1185,51 +961,9 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'sheets' && (
-          <GoogleSheetsTab
-            user={user}
-            onLogin={handleLogin}
-            sheetsConfig={sheetsConfig}
-            onCreateNewSheet={handleCreateNewSheet}
-            onSyncAll={handleSyncAllToSheets}
-            isCreating={isCreatingSheet}
-            isSyncing={isSyncingSheets}
-            products={products}
-            setSpreadsheetIdManual={(input) => {
-              const cleanId = extractSpreadsheetId(input);
-              if (!cleanId) return;
-              setSheetsConfig((prev) => ({
-                ...prev,
-                spreadsheetId: cleanId,
-                spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${cleanId}`,
-              }));
-              showToast('فایل شیت متصل شد.');
-            }}
-            onImportFromSheet={handleImportFromSheet}
-            onNavigateToTelegramPost={() => setActiveTab('telegram')}
-            onCleanDuplicates={handleCleanSheetDuplicates}
-          />
-        )}
 
-        {activeTab === 'automation' && (
-          <AutomationGuideTab
-            products={products}
-            setProducts={setProducts}
-            onSyncFromLiveHost={handleSyncFromLiveHost}
-            showToast={showToast}
-          />
-        )}
       </main>
 
-      <ManualProductIngestModal
-        isOpen={isManualIngestOpen}
-        onClose={() => setIsManualIngestOpen(false)}
-        onAddProduct={(newProd) => {
-          handleNewProductsFound([newProd]);
-        }}
-        currencyRates={currencyRates}
-        targetMarginPercent={settings.targetMarginPercent}
-      />
 
       <WebStoreSyncModal
         isOpen={isWebStoreModalOpen}
@@ -1250,22 +984,6 @@ export default function App() {
         onSaveCustomRates={handleSaveCustomRates}
       />
 
-      <SheetCleanerModal
-        isOpen={isSheetCleanerOpen}
-        onClose={() => setIsSheetCleanerOpen(false)}
-        spreadsheetId={sheetsConfig.spreadsheetId}
-        spreadsheetUrl={sheetsConfig.spreadsheetUrl}
-        onSelectSpreadsheet={(newId) => {
-          setSheetsConfig((prev) => ({
-            ...prev,
-            spreadsheetId: newId,
-            spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${newId}`,
-          }));
-        }}
-        onCleaningSuccess={async () => {
-          await handleImportFromSheet(false);
-        }}
-      />
 
       <HostMediaUploadModal
         isOpen={isMediaUploadModalOpen}
@@ -1274,10 +992,6 @@ export default function App() {
         onAddImageToProduct={handleAddImageToProduct}
       />
 
-      <DeployModal
-        isOpen={isDeployModalOpen}
-        onClose={() => setIsDeployModalOpen(false)}
-      />
 
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-[#E63946]/50 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2.5">

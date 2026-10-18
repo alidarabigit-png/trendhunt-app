@@ -42,6 +42,7 @@ export const SourcingAgentTab: React.FC<SourcingAgentTabProps> = ({
   onCleanDuplicates,
 }) => {
   const [isRunning, setIsRunning] = useState(false);
+  const [dryRunHunt, setDryRunHunt] = useState(true);
   const [progress, setProgress] = useState<SourcingProgressUpdate | null>(null);
   const [lastHuntCount, setLastHuntCount] = useState<number | null>(null);
   const [latestHuntedItems, setLatestHuntedItems] = useState<ProductItem[]>([]);
@@ -90,7 +91,8 @@ export const SourcingAgentTab: React.FC<SourcingAgentTabProps> = ({
         (p) => {
           setProgress(p);
         },
-        existingProducts
+        existingProducts,
+        { dryRun: dryRunHunt }
       );
 
       setLatestHuntedItems(items);
@@ -108,6 +110,11 @@ export const SourcingAgentTab: React.FC<SourcingAgentTabProps> = ({
       }
     } catch (err: any) {
       console.error('Hunt error:', err);
+      setProgress({
+        step: 'searching',
+        message: `❌ ${err?.message || 'اجرای ایجنت با خطا مواجه شد.'}`,
+        progressPercent: 0,
+      });
     } finally {
       setIsRunning(false);
     }
@@ -153,6 +160,15 @@ export const SourcingAgentTab: React.FC<SourcingAgentTabProps> = ({
                 </>
               )}
             </button>
+            <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={dryRunHunt}
+                onChange={(e) => setDryRunHunt(e.target.checked)}
+                className="accent-amber-400 w-4 h-4"
+              />
+              <span>فقط تست (بدون ثبت در کاتالوگ و پست در کانال)</span>
+            </label>
 
             {/* Quick Auto-Schedule status badge */}
             <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-slate-900/90 border border-slate-700/80 text-xs text-slate-300">
@@ -552,18 +568,7 @@ export const SourcingAgentTab: React.FC<SourcingAgentTabProps> = ({
               <div className="pt-2 border-t border-slate-800 space-y-2">
                 <div className="text-slate-300 font-semibold mb-1">خودکارسازی فرآیند پس از شکار کالا:</div>
 
-                <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 cursor-pointer">
-                  <div className="flex items-center gap-2">
-                    <FileCheck2 className="w-4 h-4 text-emerald-400" />
-                    <span>ارسال خودکار به گوگل شیت</span>
-                  </div>
-                  <input
-                    type="checkbox"
-                    checked={settings.autoSyncToSheets}
-                    onChange={(e) => setSettings({ ...settings, autoSyncToSheets: e.target.checked })}
-                    className="accent-emerald-400 w-4 h-4 cursor-pointer"
-                  />
-                </label>
+                
 
                 <label className="flex items-center justify-between p-2.5 rounded-xl bg-slate-800/60 border border-slate-700/50 cursor-pointer">
                   <div className="flex items-center gap-2">
