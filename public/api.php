@@ -11,7 +11,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-define('API_VERSION', '2026.10.21-v5.0-appearance');
+define('API_VERSION', '2026.10.21-v5.1-channel-autopost');
 define('ROOT_DIR', __DIR__);
 define('DATA_DIR', __DIR__ . '/data');
 define('UPLOADS_DIR', __DIR__ . '/uploads');
@@ -808,6 +808,133 @@ function build_product($in, $usdRate, $defaultMargin, $cacheImages)
     return [$product, null];
 }
 
+
+/* ------------------------------------------------------------------ */
+/* انتشار خودکار محصول جدید در کانال تلگرام                            */
+/* ------------------------------------------------------------------ */
+function channel_auto_enabled()
+{
+    global $SETTINGS_FILE;
+    $st = read_json($SETTINGS_FILE, []);
+    return !isset($st['autoChannelPost']) || !empty($st['autoChannelPost']);
+}
+
+function channel_chat_id()
+{
+    global $SETTINGS_FILE;
+    $st = read_json($SETTINGS_FILE, []);
+    $chat = secret('channel_id') !== '' ? trim(secret('channel_id')) : (isset($st['channelId']) ? trim((string)$st['channelId']) : '@NafisSmartTrade');
+    if ($chat !== '' && $chat[0] !== '@' && !preg_match('/^-?\d+$/', $chat)) {
+        $chat = '@' . $chat;
+    }
+    return $chat;
+}
+
+function channel_product_caption($p)
+{
+    $lines = ['🆕 ' . trim((string)($p['faTitle'] ?? 'محصول جدید')), ''];
+    $feats = isset($p['faFeatures']) && is_array($p['faFeatures']) ? array_slice($p['faFeatures'], 0, 3) : [];
+    foreach ($feats as $f) {
+        $f = trim((string)$f);
+        if ($f !== '') {
+            $lines[] = '• ' . mb_substr($f, 0, 110, 'UTF-8');
+        }
+    }
+    if ($feats) {
+        $lines[] = '';
+    }
+    if (!empty($p['moq']) && is_numeric($p['moq'])) {
+        $lines[] = '📦 حداقل سفارش: ' . (int)$p['moq'] . ' عدد';
+    }
+    $lines[] = '💰 قیمت عمده، مشخصات کامل و ثبت استعلام در مینی‌اپ 👇';
+    return mb_substr(implode("\n", $lines), 0, 1000, 'UTF-8');
+}
+
+function channel_product_link($p)
+{
+    global $SETTINGS_FILE;
+    $st = read_json($SETTINGS_FILE, []);
+    $base = isset($st['miniAppUrl']) ? trim((string)$st['miniAppUrl']) : '';
+    if ($base === '' || strpos($base, 'https://') !== 0 || strpos($base, 'ais-dev-') !== false) {
+        $base = SITE_ORIGIN;
+    }
+    $base = rtrim($base, '/');
+    return $base . (strpos($base, '?') !== false ? '&' : '?') . 'view=miniapp&productId=' . rawurlencode((string)($p['id'] ?? ''));
+}
+
+/* یک محصول را در کانال منتشر می‌کند. خروجی: [ok(bool), error(string)] */
+function channel_announce($p)
+{
+    if (!is_array($p) || empty($p['id'])) {
+        return [false, 'invalid product'];
+    }
+    if (secret('bot_token') === '') {
+        return [false, 'bot_token is not configured'];
+    }
+    $chat = channel_chat_id();
+    $caption = channel_product_caption($p);
+    $markup = ['inline_keyboard' => [[['text' => '🛒 مشاهده جزئیات و استعلام در مینی‌اپ', 'url' => channel_product_link($p)]]]];
+    $photo = !empty($p['mainImage']) ? trim((string)$p['mainImage']) : '';
+    $ok = false;
+    $err = '';
+    if ($photo !== '' && is_http_url($photo)) {
+        $r = tg_call('sendPhoto', ['chat_id' => $chat, 'photo' => cache_image($photo), 'caption' => $caption, 'reply_markup' => $markup]);
+        $ok = !empty($r['ok']);
+        $err = $ok ? '' : (isset($r['description']) ? $r['description'] : 'sendPhoto failed');
+    }
+    if (!$ok) {
+        $r = tg_call('sendMessage', ['chat_id' => $chat, 'text' => $caption, 'reply_markup' => $markup]);
+        $ok = !empty($r['ok']);
+        $err = $ok ? '' : (isset($r['description']) ? $r['description'] : ($err ?: 'sendMessage failed'));
+    }
+    if ($ok) {
+        global $CATALOG_FILE;
+        $id = $p['id'];
+        with_lock('catalog', function () use ($CATALOG_FILE, $id) {
+            $items = read_json($CATALOG_FILE, []);
+            foreach ($items as &$it) {
+                if (isset($it['id']) && $it['id'] === $id) {
+                    $it['isPostedToTelegram'] = true;
+                    $it['channelPostedAt'] = date('c');
+                    break;
+                }
+            }
+            unset($it);
+            write_json($CATALOG_FILE, $items);
+        });
+    }
+    return [$ok, $err];
+}
+
+/* چند محصول را پشت‌سرهم (حداکثر $max) منتشر می‌کند؛ هرگز باعث خطای درخواست اصلی نمی‌شود. */
+function channel_announce_many($products, $max = 5)
+{
+    $posted = 0;
+    $errors = [];
+    try {
+        if (!channel_auto_enabled()) {
+            return ['posted' => 0, 'errors' => []];
+        }
+        foreach (array_slice(array_values((array)$products), 0, $max) as $i => $p) {
+            if (!empty($p['isPostedToTelegram'])) {
+                continue;
+            }
+            if ($i > 0) {
+                sleep(1);
+            }
+            list($ok, $err) = channel_announce($p);
+            if ($ok) {
+                $posted++;
+            } else {
+                $errors[] = $err;
+            }
+        }
+    } catch (\Throwable $e) {
+        $errors[] = $e->getMessage();
+    }
+    return ['posted' => $posted, 'errors' => $errors];
+}
+
 /* ================================================================== */
 /* ROUTER                                                              */
 /* ================================================================== */
@@ -1049,8 +1176,11 @@ if ($action === 'ingest_products' && $method === 'POST') {
         }
         return ['added' => $added, 'skipped' => $skipped];
     });
+    $chanRes = channel_announce_many($result['added']);
     out([
         'success' => true,
+        'channel_posted' => $chanRes['posted'],
+        'channel_errors' => $chanRes['errors'],
         'added_count' => count($result['added']),
         'skipped' => $result['skipped'],
         'added_ids' => array_map(function ($p) {
@@ -1578,7 +1708,7 @@ if ($action === 'ingest_manual_product' && $method === 'POST') {
         fail('خطا در ساخت محصول: ' . $buildErr, 422);
     }
 
-    with_lock('catalog', function () use ($CATALOG_FILE, $builtProduct) {
+    $wasUpdated = with_lock('catalog', function () use ($CATALOG_FILE, $builtProduct) {
         $existing = read_json($CATALOG_FILE, []);
         if (!is_array($existing)) {
             $existing = [];
@@ -1604,7 +1734,9 @@ if ($action === 'ingest_manual_product' && $method === 'POST') {
             @copy($CATALOG_FILE, DATA_DIR . '/catalog.bak.json');
         }
         write_json($CATALOG_FILE, $merged);
+        return $updated;
     });
+    $chanRes = $wasUpdated ? ['posted' => 0, 'errors' => []] : channel_announce_many([$builtProduct]);
 
     with_lock('queue', function () use ($rawId) {
         $q2 = queue_load();
@@ -1626,6 +1758,8 @@ if ($action === 'ingest_manual_product' && $method === 'POST') {
         'success' => true,
         'message' => 'محصول با موفقیت منتشر شد',
         'product_id' => $builtProduct['id'],
+        'channel_posted' => $chanRes['posted'],
+        'channel_errors' => $chanRes['errors'],
     ]);
 }
 if ($action === 'get_pricing_config') {
@@ -1698,10 +1832,45 @@ $adminActions = [
     'get_products_admin', 'save_products', 'upload_image', 'cache_catalog_images',
     'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
+    'channel_post_pending',
     'mark_posted', // FIXED: اکشن mark_posted به لیست ادمین اضافه شد
 ];
 if (in_array($action, $adminActions, true)) {
     require_admin();
+}
+
+/* ارسال دستی محصولات منتشرنشده در کانال (حداکثر ۵ تا در هر بار) */
+if ($action === 'channel_post_pending' && $method === 'POST') {
+    @set_time_limit(60);
+    $ids = isset($body['ids']) && is_array($body['ids']) ? $body['ids'] : null;
+    $items = read_json($CATALOG_FILE, []);
+    $todo = [];
+    foreach ((array)$items as $it) {
+        if (!is_array($it) || empty($it['id']) || !empty($it['isPostedToTelegram'])) {
+            continue;
+        }
+        if ($ids !== null && !in_array($it['id'], $ids, true)) {
+            continue;
+        }
+        $todo[] = $it;
+        if (count($todo) >= 5) {
+            break;
+        }
+    }
+    $posted = 0;
+    $errors = [];
+    foreach ($todo as $i => $it) {
+        if ($i > 0) {
+            sleep(1);
+        }
+        list($ok, $err) = channel_announce($it);
+        if ($ok) {
+            $posted++;
+        } else {
+            $errors[] = $err;
+        }
+    }
+    out(['success' => true, 'posted' => $posted, 'attempted' => count($todo), 'errors' => $errors]);
 }
 
 if ($action === 'get_products_admin') {
@@ -1932,6 +2101,9 @@ if ($action === 'save_settings' && $method === 'POST') {
         // اگر توکن جدید ماسک‌شده برگشت (یعنی کاربر تغییرش نداده)، مقدار قبلی حفظ شود
         if (isset($cur['botToken']) && (isset($in['botToken']) && strpos((string)$in['botToken'], '...') !== false)) {
             // توکن ماسک‌شده است — کاری نمی‌کنیم (قبلاً حفظ شده)
+        }
+        if (isset($in['autoChannelPost'])) {
+            $cur['autoChannelPost'] = filter_var($in['autoChannelPost'], FILTER_VALIDATE_BOOLEAN);
         }
         if (isset($in['ui']) && is_array($in['ui'])) {
             // ---- ظاهر مینی‌اپ: هر مقدار اعتبارسنجی و محدود می‌شود ----
