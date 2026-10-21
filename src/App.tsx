@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
 import { Navbar } from './components/Navbar';
-import { SourcingAgentTab } from './components/SourcingAgentTab';
+import { ManualProcessTab } from './components/ManualProcessTab';
 import { ProductsCatalogTab } from './components/ProductsCatalogTab';
 import { TelegramMiniAppPreview } from './components/TelegramMiniAppPreview';
+import { AppearanceSettingsTab } from './components/AppearanceSettingsTab';
 import { TelegramPostGeneratorTab } from './components/TelegramPostGeneratorTab';
-import { GoogleSheetsTab } from './components/GoogleSheetsTab';
-import { AutomationGuideTab } from './components/AutomationGuideTab';
 import { AdminPanelTab } from './components/AdminPanelTab';
 import { CustomerPortalTab } from './components/CustomerPortalTab';
-import { ManualProductIngestModal } from './components/ManualProductIngestModal';
 import { WebStoreSyncModal } from './components/WebStoreSyncModal';
 import {
   ProductItem,
@@ -21,6 +19,7 @@ import {
   CustomerInquiry,
   WebStoreConfig,
   MiniAppNotification,
+  MiniAppUi,
 } from './types';
 import { INITIAL_PRODUCTS } from './data/sampleProducts';
 import { INITIAL_CUSTOMERS, INITIAL_INQUIRIES, DEFAULT_CUSTOMER } from './data/sampleCustomers';
@@ -35,10 +34,8 @@ import {
 } from './services/googleSheets';
 import { CurrencyRatesModal } from './components/CurrencyRatesModal';
 import { SheetCleanerModal } from './components/SheetCleanerModal';
-import { DeployModal } from './components/DeployModal';
 import { HostMediaUploadModal } from './components/HostMediaUploadModal';
 import { deduplicateProducts, filterNewProducts } from './utils/catalogUtils';
-import { runAutomatedSourcingHunt } from './services/geminiSourcing';
 
 export default function App() {
   const [viewMode, setViewMode] = useState<'miniapp' | 'admin'>(() => {
@@ -58,7 +55,14 @@ export default function App() {
     return 'miniapp';
   });
 
-  const [activeTab, setActiveTab] = useState<string>('agent');
+  const [activeTab, setActiveTab] = useState<string>('manual');
+  const [miniUi, setMiniUi] = useState<MiniAppUi | null>(null);
+  useEffect(() => {
+    fetch('/api.php?action=get_ui')
+      .then((r) => r.json())
+      .then((d) => { if (d?.ui && typeof d.ui === 'object' && d.ui.roles) setMiniUi(d.ui as MiniAppUi); })
+      .catch(() => {});
+  }, []);
   const [user, setUser] = useState<User | null>(null);
   const [isLoggingIn, setIsLoggingIn] = useState<boolean>(false);
 
@@ -179,8 +183,6 @@ export default function App() {
   }, [products]);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [isManualIngestOpen, setIsManualIngestOpen] = useState(false);
-  const [isDeployModalOpen, setIsDeployModalOpen] = useState(false);
   const [isMediaUploadModalOpen, setIsMediaUploadModalOpen] = useState(false);
 
   const handleAddImageToProduct = (productId: string, imageUrl: string) => {
@@ -363,33 +365,6 @@ export default function App() {
     return DEFAULT_CUSTOMER;
   });
 
-  const handleClearDemoData = () => {
-    setCustomers([]);
-    setInquiries([]);
-    const blankCustomer: CustomerUser = {
-      id: 'USR-' + Math.floor(1000 + Math.random() * 9000),
-      name: 'کاربر مهمان',
-      companyName: '',
-      telegramUsername: '',
-      phone: '',
-      city: 'تهران',
-      role: 'customer',
-      status: 'pending',
-      requestedAt: new Date().toLocaleDateString('en-US'),
-      tier: 'همکار برنزی',
-      totalOrdersCount: 0,
-    };
-    setCurrentCustomer(blankCustomer);
-    try {
-      localStorage.setItem('nfs_crm_customers', JSON.stringify([]));
-      localStorage.setItem('nfs_crm_inquiries', JSON.stringify([]));
-      localStorage.setItem('nfs_current_customer', JSON.stringify(blankCustomer));
-      const isPhpHost = window.location.hostname.includes('nafisstore.com') || window.location.pathname.includes('.php');
-      const endpoint = isPhpHost ? '/api.php?action=clean_sample_crm' : '/api/crm/clean';
-      fetch(endpoint, { method: 'POST' }).catch(() => {});
-    } catch (e) {}
-    showToast('داده‌های نمونه، مشتریان و استعلام‌ها پاکسازی شدند.');
-  };
 
   const [settings, setSettingsState] = useState<SourcingSettings>(() => {
     try {
@@ -452,36 +427,6 @@ export default function App() {
     });
   };
 
-  // ۲) غیرفعال کردن شکارچی مرورگر
-  useEffect(() => {
-    if (true) return; // شکار روزانه حالا روی GitHub Actions اجرا می‌شه
-    const checkAndRunDailyScheduler = async () => {
-      const now = new Date();
-      const currentHour = String(now.getHours()).padStart(2, '0');
-      const currentMin = String(now.getMinutes()).padStart(2, '0');
-      const currentTime = `${currentHour}:${currentMin}`;
-      const todayString = now.toISOString().split('T')[0];
-      const scheduledTime = settings.autoScheduleTime || '08:00';
-
-      if (currentTime >= scheduledTime && settings.lastAutoRunDate !== todayString) {
-        setSettings((prev) => ({ ...prev, lastAutoRunDate: todayString }));
-        try {
-          const freshHunted = await runAutomatedSourcingHunt(
-            { ...settings, usdToTomanRate: currencyRates.usd },
-            () => {},
-            products
-          );
-          if (freshHunted.length > 0) {
-            handleNewProductsFound(freshHunted);
-          }
-        } catch (err) {}
-      }
-    };
-
-    checkAndRunDailyScheduler();
-    const timer = setInterval(checkAndRunDailyScheduler, 30000);
-    return () => clearInterval(timer);
-  }, [settings.autoScheduleEnabled, settings.autoScheduleTime, settings.lastAutoRunDate, products, currencyRates.usd]);
 
   const [sheetsConfig, setSheetsConfigState] = useState<GoogleSheetsConfig>(() => {
     try {
@@ -1020,6 +965,7 @@ export default function App() {
   if (viewMode === 'miniapp') {
     return (
       <TelegramMiniAppPreview
+        ui={miniUi}
         products={products}
         selectedProduct={selectedProduct}
         onSelectProduct={setSelectedProduct}
@@ -1055,13 +1001,12 @@ export default function App() {
         syncedSheetsCount={(products || []).filter((p) => p?.isSyncedToSheets).length}
         pendingInquiriesCount={(inquiries || []).filter((i) => i?.status === 'pending_review').length}
         pendingCustomersCount={(customers || []).filter((c) => c?.status === 'pending').length}
-        onOpenManualIngest={() => setIsManualIngestOpen(true)}
+        onOpenManualIngest={() => setActiveTab('manual')}
         currentCustomer={currentCustomer || DEFAULT_CUSTOMER}
         onOpenCurrencyModal={() => setIsCurrencyModalOpen(true)}
         theme={theme}
         onToggleTheme={toggleTheme}
         onSwitchToMiniApp={() => setViewMode('miniapp')}
-        onOpenDeployModal={() => setIsDeployModalOpen(true)}
       />
 
       {pendingExtensionProducts.length > 0 && (
@@ -1073,7 +1018,7 @@ export default function App() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setIsManualIngestOpen(true)}
+              onClick={() => setActiveTab('manual')}
               className="px-3 py-1 bg-amber-400 hover:bg-amber-300 text-slate-950 font-black rounded-lg text-xs"
             >
               مشاهده و ثبت
@@ -1083,14 +1028,12 @@ export default function App() {
       )}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {activeTab === 'agent' && (
-          <SourcingAgentTab
-            settings={settings}
-            setSettings={setSettings}
-            onNewProductsFound={handleNewProductsFound}
-            usdRate={currencyRates.usd}
-            existingProducts={products}
-            onCleanDuplicates={handleCleanDuplicates}
+        {activeTab === 'manual' && <ManualProcessTab />}
+
+        {activeTab === 'appearance' && (
+          <AppearanceSettingsTab
+            adminKey={typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('nfs_admin_key') : null}
+            onSaved={(ui) => setMiniUi(ui)}
           />
         )}
 
@@ -1132,6 +1075,7 @@ export default function App() {
 
         {activeTab === 'miniapp' && (
           <TelegramMiniAppPreview
+        ui={miniUi}
             products={products}
             selectedProduct={selectedProduct}
             onSelectProduct={setSelectedProduct}
@@ -1169,7 +1113,6 @@ export default function App() {
             onRejectCustomer={handleRejectCustomer}
             inquiries={inquiries}
             onReplyToInquiry={handleReplyToInquiry}
-            onClearDemoData={handleClearDemoData}
           />
         )}
 
@@ -1185,51 +1128,9 @@ export default function App() {
           />
         )}
 
-        {activeTab === 'sheets' && (
-          <GoogleSheetsTab
-            user={user}
-            onLogin={handleLogin}
-            sheetsConfig={sheetsConfig}
-            onCreateNewSheet={handleCreateNewSheet}
-            onSyncAll={handleSyncAllToSheets}
-            isCreating={isCreatingSheet}
-            isSyncing={isSyncingSheets}
-            products={products}
-            setSpreadsheetIdManual={(input) => {
-              const cleanId = extractSpreadsheetId(input);
-              if (!cleanId) return;
-              setSheetsConfig((prev) => ({
-                ...prev,
-                spreadsheetId: cleanId,
-                spreadsheetUrl: `https://docs.google.com/spreadsheets/d/${cleanId}`,
-              }));
-              showToast('فایل شیت متصل شد.');
-            }}
-            onImportFromSheet={handleImportFromSheet}
-            onNavigateToTelegramPost={() => setActiveTab('telegram')}
-            onCleanDuplicates={handleCleanSheetDuplicates}
-          />
-        )}
 
-        {activeTab === 'automation' && (
-          <AutomationGuideTab
-            products={products}
-            setProducts={setProducts}
-            onSyncFromLiveHost={handleSyncFromLiveHost}
-            showToast={showToast}
-          />
-        )}
       </main>
 
-      <ManualProductIngestModal
-        isOpen={isManualIngestOpen}
-        onClose={() => setIsManualIngestOpen(false)}
-        onAddProduct={(newProd) => {
-          handleNewProductsFound([newProd]);
-        }}
-        currencyRates={currencyRates}
-        targetMarginPercent={settings.targetMarginPercent}
-      />
 
       <WebStoreSyncModal
         isOpen={isWebStoreModalOpen}
@@ -1274,10 +1175,6 @@ export default function App() {
         onAddImageToProduct={handleAddImageToProduct}
       />
 
-      <DeployModal
-        isOpen={isDeployModalOpen}
-        onClose={() => setIsDeployModalOpen(false)}
-      />
 
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-[#E63946]/50 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2.5">

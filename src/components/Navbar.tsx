@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User } from 'firebase/auth';
 import {
   Bot,
+  Palette,
   Package,
   Smartphone,
   Send,
@@ -73,9 +74,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   const tabs = [
-    { id: 'agent', label: 'ایجنت رصد و شکار کالا', icon: Bot, badge: 'خودکار' },
+    { id: 'manual', label: 'پردازش دستی (JSON)', icon: Workflow },
     { id: 'catalog', label: 'کاتالوگ و مشخصات سئو', icon: Package, badge: productsCount },
     { id: 'miniapp', label: 'مینی‌آپ تلگرام (پیش‌نمایش)', icon: Smartphone },
+    { id: 'appearance', label: 'تنظیمات ظاهر مینی‌اپ', icon: Palette },
     { id: 'telegram', label: 'تولیدکننده پست کانال', icon: Send },
     {
       id: 'admin',
@@ -91,8 +93,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       badge: currentCustomer?.status === 'approved' ? 'تایید شده' : 'در انتظار',
       badgeColor: currentCustomer?.status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950',
     },
-    { id: 'sheets', label: 'گوگل شیت و درایو', icon: FileSpreadsheet, badge: syncedSheetsCount > 0 ? `${syncedSheetsCount} ثبت` : undefined },
-    { id: 'automation', label: 'راهنمای اتوماسیون 100%', icon: Workflow },
   ];
 
   const handleTabClick = (tabId: string) => {

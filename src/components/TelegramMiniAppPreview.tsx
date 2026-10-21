@@ -33,7 +33,7 @@ import {
   Info,
   FileText,
 } from 'lucide-react';
-import { ProductItem, CustomerUser, CurrencyRates, MiniAppNotification, CustomerInquiry } from '../types';
+import { ProductItem, CustomerUser, CurrencyRates, MiniAppNotification, CustomerInquiry, MiniAppUi } from '../types';
 import { NfsLogo } from './NfsLogo';
 import { deduplicateProducts } from '../utils/catalogUtils';
 
@@ -51,6 +51,7 @@ interface TelegramMiniAppPreviewProps {
   onCustomerSendMessage?: (inquiryId: string, text: string) => void;
   isStandalone?: boolean;
   onSwitchToAdmin?: () => void;
+  ui?: MiniAppUi | null;
 }
 
 export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
@@ -67,6 +68,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   onCustomerSendMessage,
   isStandalone = false,
   onSwitchToAdmin,
+  ui = null,
 }) => {
   const [activeCategory, setActiveCategory] = useState('همه');
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -205,6 +207,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   const renderScreenContent = () => (
     <div
       data-phone-dark={isDarkMode ? 'true' : 'false'}
+      style={ui ? { fontFamily: ui.fontFamily, color: isDarkMode ? ui.textColor : undefined, background: isDarkMode ? ui.pageBg : undefined, borderRadius: undefined } : undefined}
       className={`w-full ${
         isStandalone ? 'min-h-screen max-w-lg mx-auto shadow-2xl' : 'h-[760px] rounded-[34px]'
       } overflow-hidden flex flex-col relative transition-colors duration-200 select-none ${
@@ -796,7 +799,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       )}
                     </div>
 
-                    <h3 className="text-sm font-extrabold leading-snug">
+                    <h3 className="text-sm font-extrabold leading-snug" style={ui ? { fontSize: ui.roles.heading.size, fontWeight: ui.roles.heading.weight, color: ui.roles.heading.color, lineHeight: ui.roles.heading.lineHeight } : undefined}>
                       {currentProduct.faTitle}
                     </h3>
 

@@ -110,7 +110,7 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
       </div>
 
       {/* Sub Tabs: Inquiries vs Customers */}
-      <div className="flex border-b border-slate-800 gap-3 pb-2">
+      <div className="flex flex-wrap border-b border-slate-800 gap-3 pb-2">
         <button
           onClick={() => setActiveAdminSubTab('inquiries')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
@@ -152,6 +152,7 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           <span>تحلیل نوسانات درهم و یوان (Recharts)</span>
         </button>
 
+
         {onClearDemoData && (
           isConfirmingClear ? (
             <div className="mr-auto flex items-center gap-1.5 bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg animate-pulse">
@@ -191,6 +192,7 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
 
       {/* View 3: Recharts Currency Fluctuation Chart */}
       {activeAdminSubTab === 'currency' && <CurrencyFluctuationChart />}
+
 
       {/* View 1: Inquiries Management & Quick CRM Chat */}
       {activeAdminSubTab === 'inquiries' && (
