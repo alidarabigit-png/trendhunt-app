@@ -49,11 +49,11 @@ export const CurrencyRatesModal: React.FC<CurrencyRatesModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-[#0F172A] border border-[#1E293B] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl text-white">
+      <div className="bg-[#0B111C] border border-[#25395A] rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl text-white">
         {/* Header */}
-        <div className="p-5 border-b border-[#1E293B] flex items-center justify-between">
+        <div className="p-5 border-b border-[#25395A] flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-10 h-10 rounded-xl bg-[#E63946]/20 text-[#FF4D6D] flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-[#4A70A9]/20 text-[#8FABD4] flex items-center justify-center">
               <TrendingUp className="w-5 h-5" />
             </div>
             <div>
@@ -89,9 +89,9 @@ export const CurrencyRatesModal: React.FC<CurrencyRatesModalProps> = ({
             <button
               onClick={() => onRefreshRates()}
               disabled={isRefreshing}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#1E293B] hover:bg-slate-700 text-slate-200 font-bold border border-slate-700 transition cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#25395A] hover:bg-slate-700 text-slate-200 font-bold border border-slate-700 transition cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#E63946]' : ''}`} />
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? 'animate-spin text-[#4A70A9]' : ''}`} />
               <span>{isRefreshing ? 'در حال استعلام...' : 'استعلام فوری نرخ'}</span>
             </button>
           </div>
@@ -141,7 +141,7 @@ export const CurrencyRatesModal: React.FC<CurrencyRatesModalProps> = ({
                   step="100"
                   value={usdInput}
                   onChange={(e) => handleUsdChange(Number(e.target.value))}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono font-bold text-amber-300 focus:outline-none focus:border-[#E63946]"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sm font-mono font-bold text-amber-300 focus:outline-none focus:border-[#4A70A9]"
                 />
                 <span className="text-xs text-slate-400 shrink-0">تومان</span>
               </div>
@@ -160,7 +160,7 @@ export const CurrencyRatesModal: React.FC<CurrencyRatesModalProps> = ({
                     step="50"
                     value={aedInput}
                     onChange={(e) => setAedInput(Number(e.target.value))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-sky-300 focus:outline-none focus:border-[#E63946]"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-sky-300 focus:outline-none focus:border-[#4A70A9]"
                   />
                   <span className="text-[10px] text-slate-400 shrink-0">تومان</span>
                 </div>
@@ -177,7 +177,7 @@ export const CurrencyRatesModal: React.FC<CurrencyRatesModalProps> = ({
                     step="50"
                     value={cnyInput}
                     onChange={(e) => setCnyInput(Number(e.target.value))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-rose-300 focus:outline-none focus:border-[#E63946]"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-rose-300 focus:outline-none focus:border-[#4A70A9]"
                   />
                   <span className="text-[10px] text-slate-400 shrink-0">تومان</span>
                 </div>
@@ -194,7 +194,7 @@ export const CurrencyRatesModal: React.FC<CurrencyRatesModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-[#1E293B] bg-slate-950/60 flex items-center justify-end gap-3">
+        <div className="p-4 border-t border-[#25395A] bg-slate-950/60 flex items-center justify-end gap-3">
           <button
             onClick={onClose}
             className="px-4 py-2.5 rounded-xl text-slate-400 hover:text-white text-xs font-semibold transition cursor-pointer"

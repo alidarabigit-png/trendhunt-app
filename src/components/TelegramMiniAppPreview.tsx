@@ -214,7 +214,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
     '--mx-accent': t.accent,
     '--mx-btn': t.buttonBg,
     '--mx-btn-text': t.buttonText,
-    '--mx-ok': '#4ADE80',
+    '--mx-ok': t.accent,
     '--mx-radius': `${t.radius}px`,
     fontFamily: t.fontFamily === 'Vazirmatn' ? "'Vazirmatn', system-ui, sans-serif" : t.fontFamily,
     color: t.textColor,
@@ -234,14 +234,14 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             {/* Telegram Header Bar */}
             <div
               className={`px-3.5 pt-8 pb-3 border-b flex items-center justify-between z-20 ${
-                isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[#0F172A] text-[color:var(--mx-text)] border-[color:var(--mx-border)]'
+                isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border-[color:var(--mx-border)]'
               }`}
             >
               {miniAppView === 'detail' ? (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setMiniAppView('catalog')}
-                    className="flex items-center gap-1 text-xs font-bold text-[color:var(--mx-accent)] hover:opacity-80 transition cursor-pointer bg-white/10 px-2 py-1 rounded-[calc(var(--mx-radius)*0.55)]"
+                    className="flex items-center gap-1 text-xs font-bold text-[color:var(--mx-accent)] hover:opacity-80 transition cursor-pointer bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)] px-2 py-1 rounded-[calc(var(--mx-radius)*0.55)]"
                     title="بازگشت به کاتالوگ"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -257,7 +257,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   {/* Mobile Drawer Trigger for Mini App */}
                   <button
                     onClick={() => setIsMiniAppDrawerOpen(true)}
-                    className="p-1.5 rounded-[calc(var(--mx-radius)*0.55)] bg-black/30 hover:bg-black/50 text-[color:var(--mx-accent)] border border-white/10 transition cursor-pointer"
+                    className="p-1.5 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_14%,transparent)] text-[color:var(--mx-accent)] border border-[color:var(--mx-border)] transition cursor-pointer"
                     title="باز کردن منوی کشویی مینی‌آپ"
                   >
                     <Menu className="w-4 h-4" />
@@ -277,12 +277,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 {/* Notification Bell with Badge */}
                 <button
                   onClick={() => setIsNotificationsModalOpen(true)}
-                  className="relative p-1.5 rounded-[calc(var(--mx-radius)*0.55)] bg-black/20 hover:bg-black/40 text-[color:var(--mx-body)] hover:text-[color:var(--mx-text)] transition cursor-pointer"
+                  className="relative p-1.5 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] text-[color:var(--mx-body)] hover:text-[color:var(--mx-text)] transition cursor-pointer"
                   title="اعلان‌ها و پاسخ‌های ادمین"
                 >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[var(--mx-accent)] text-[color:var(--mx-text)] text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold font-mono animate-pulse shadow-sm shadow-[var(--mx-accent)]/50">
+                    <span className="absolute -top-1 -right-1 bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold font-mono animate-pulse shadow-sm shadow-[var(--mx-accent)]/50">
                       {unreadCount}
                     </span>
                   )}
@@ -311,9 +311,9 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   if (onMarkNotificationRead) onMarkNotificationRead(activePushToast.id);
                   setActivePushToast(null);
                 }}
-                className="absolute top-16 left-3 right-3 z-45 bg-[#0F172A]/95 border-2 border-[color:var(--mx-accent)] text-[color:var(--mx-text)] p-3 rounded-[var(--mx-radius)] shadow-2xl backdrop-blur-md cursor-pointer animate-bounce flex items-start gap-2.5"
+                className="absolute top-16 left-3 right-3 z-45 bg-[var(--mx-card)] border-2 border-[color:var(--mx-accent)] text-[color:var(--mx-text)] p-3 rounded-[var(--mx-radius)] shadow-2xl backdrop-blur-md cursor-pointer animate-bounce flex items-start gap-2.5"
               >
-                <div className="w-8 h-8 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-accent)] text-[color:var(--mx-text)] flex items-center justify-center shrink-0 shadow-md shadow-black/30">
+                <div className="w-8 h-8 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] flex items-center justify-center shrink-0 shadow-md shadow-black/30">
                   <BellRing className="w-4 h-4 animate-pulse" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -350,11 +350,11 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end">
                 <div
                   className={`w-full max-h-[85%] rounded-t-3xl border-t flex flex-col shadow-2xl overflow-hidden ${
-                    isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)] text-[color:var(--mx-text)]' : 'bg-[#0F172A] border-[color:var(--mx-border)] text-[color:var(--mx-text)]'
+                    isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)] text-[color:var(--mx-text)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)] text-[color:var(--mx-text)]'
                   }`}
                 >
                   {/* Modal Header */}
-                  <div className="p-3.5 border-b border-white/10 flex items-center justify-between">
+                  <div className="p-3.5 border-b border-[color:var(--mx-border)] flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-[calc(var(--mx-radius)*0.55)] bg-[var(--mx-accent)]/20 text-[color:var(--mx-accent)] flex items-center justify-center">
                         <Bell className="w-4 h-4" />
@@ -378,7 +378,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           setIsNotificationsModalOpen(false);
                           setSelectedInquiryDetail(null);
                         }}
-                        className="p-1 rounded-[calc(var(--mx-radius)*0.55)] hover:bg-white/10"
+                        className="p-1 rounded-[calc(var(--mx-radius)*0.55)] hover:bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)]"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -390,7 +390,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     {selectedInquiryDetail ? (
                       // Single Inquiry Conversation & Quotation View
                       <div className="space-y-3">
-                        <div className="p-3 rounded-[var(--mx-radius)] bg-black/25 border border-white/10 space-y-2">
+                        <div className="p-3 rounded-[var(--mx-radius)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] space-y-2">
                           <div className="flex items-center gap-2.5">
                             <img
                               src={selectedInquiryDetail.productImage}
@@ -406,7 +406,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             </div>
                           </div>
 
-                          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px]">
+                          <div className="pt-2 border-t border-[color:var(--mx-border)] flex items-center justify-between text-[10px]">
                             <span className="text-[color:var(--mx-muted)]">وضعیت پیش‌فاکتور:</span>
                             <span className="font-bold text-[color:var(--mx-price)]">
                               {selectedInquiryDetail.status === 'quoted'
@@ -449,7 +449,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                                 setCustomerChatReplyText('');
                               }
                             }}
-                            className="flex-1 bg-black/40 border border-white/15 rounded-[calc(var(--mx-radius)*0.75)] px-3 py-2 text-xs text-[color:var(--mx-text)] focus:outline-none focus:border-[color:var(--mx-accent)]"
+                            className="flex-1 bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] border border-[color:var(--mx-border)] rounded-[calc(var(--mx-radius)*0.75)] px-3 py-2 text-xs text-[color:var(--mx-text)] focus:outline-none focus:border-[color:var(--mx-accent)]"
                           />
                           <button
                             onClick={() => {
@@ -458,7 +458,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                                 setCustomerChatReplyText('');
                               }
                             }}
-                            className="p-2 bg-[var(--mx-accent)] text-[color:var(--mx-text)] rounded-[calc(var(--mx-radius)*0.75)]"
+                            className="p-2 bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] rounded-[calc(var(--mx-radius)*0.75)]"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
@@ -497,7 +497,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               }}
                               className={`p-3 rounded-[var(--mx-radius)] border transition cursor-pointer flex items-start gap-2.5 ${
                                 notif.read
-                                  ? 'bg-black/15 border-white/5 opacity-75'
+                                  ? 'bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)] border-[color:var(--mx-border)] opacity-75'
                                   : 'bg-[var(--mx-accent)]/10 border-[color:var(--mx-accent)]/40 text-[color:var(--mx-text)]'
                               }`}
                             >
@@ -536,18 +536,18 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             {/* Drawer Container (Sliding from Right in RTL) */}
             <aside
               className={`absolute top-0 bottom-0 right-0 z-50 w-72 max-w-[85%] ${
-                isDarkMode ? 'bg-[var(--mx-page)] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]' : 'bg-[#0F172A] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]'
+                isDarkMode ? 'bg-[var(--mx-page)] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]'
               } shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out transform ${
                 isMiniAppDrawerOpen ? 'translate-x-0' : 'translate-x-full'
               }`}
             >
               {/* Drawer Header */}
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <div className="p-4 border-b border-[color:var(--mx-border)] flex items-center justify-between">
                 <NfsLogo size="sm" />
 
                 <button
                   onClick={() => setIsMiniAppDrawerOpen(false)}
-                  className="p-1 rounded-[calc(var(--mx-radius)*0.55)] bg-white/10 hover:bg-white/20 text-[color:var(--mx-body)] hover:text-[color:var(--mx-text)] transition cursor-pointer"
+                  className="p-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] text-[color:var(--mx-body)] hover:text-[color:var(--mx-text)] transition cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -556,7 +556,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               {/* Drawer Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 no-scrollbar text-xs">
                 {/* Customer Account Summary Card */}
-                <div className="p-3 rounded-[var(--mx-radius)] bg-black/30 border border-white/10 space-y-1.5">
+                <div className="p-3 rounded-[var(--mx-radius)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] space-y-1.5">
                   <div className="flex items-center justify-between">
                     <span className="text-[10px] text-[color:var(--mx-muted)]">حساب کاربری همکار:</span>
                     <span
@@ -633,7 +633,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 {/* Currency Switcher in Drawer */}
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-[color:var(--mx-body)] block">واحد پول نمایشی قیمت‌ها:</label>
-                  <div className="grid grid-cols-4 gap-1 p-1 bg-black/30 rounded-[calc(var(--mx-radius)*0.75)] border border-white/10 text-center font-mono text-[10px]">
+                  <div className="grid grid-cols-4 gap-1 p-1 bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] rounded-[calc(var(--mx-radius)*0.75)] border border-[color:var(--mx-border)] text-center font-mono text-[10px]">
                     <button
                       onClick={() => setDisplayCurrency('TOMAN')}
                       className={`py-1 rounded-[calc(var(--mx-radius)*0.55)] transition font-sans cursor-pointer ${displayCurrency === 'TOMAN' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] font-bold' : 'text-[color:var(--mx-muted)]'}`}
@@ -677,7 +677,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         className={`w-full flex items-center justify-between p-2.5 rounded-[calc(var(--mx-radius)*0.75)] text-xs font-semibold transition cursor-pointer ${
                           isCatActive
                             ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] border border-[color:var(--mx-accent)] font-bold shadow-md shadow-black/30'
-                            : 'text-[color:var(--mx-body)] hover:bg-white/5'
+                            : 'text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
@@ -694,12 +694,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 </div>
 
                 {/* External links */}
-                <div className="pt-2 border-t border-white/10 space-y-1.5">
+                <div className="pt-2 border-t border-[color:var(--mx-border)] space-y-1.5">
                   <a
                     href="https://t.me/NafisSmartTrade"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-white/5 transition"
+                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)] transition"
                   >
                     <div className="flex items-center gap-2">
                       <Send className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
@@ -712,7 +712,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     href="https://t.me/nafistejarat_bot"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-white/5 transition"
+                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)] transition"
                   >
                     <div className="flex items-center gap-2">
                       <Bot className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
@@ -725,7 +725,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     href="https://nafisstore.com"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-white/5 transition"
+                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)] transition"
                   >
                     <div className="flex items-center gap-2">
                       <Globe className="w-3.5 h-3.5 text-[color:var(--mx-ok)]" />
@@ -745,7 +745,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               </div>
 
               {/* Drawer Footer */}
-              <div className="p-3 border-t border-white/10 text-center text-[10px] text-[color:var(--mx-muted)]">
+              <div className="p-3 border-t border-[color:var(--mx-border)] text-center text-[10px] text-[color:var(--mx-muted)]">
                 <span>NFS Telegram MiniApp v2.4</span>
               </div>
             </aside>
@@ -757,7 +757,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 <div className="space-y-3 pb-2 animate-fadeIn">
                   {/* Large Image Gallery & Switcher */}
                   <div className="space-y-2">
-                    <div className="relative aspect-square w-full rounded-[var(--mx-radius)] overflow-hidden bg-[var(--mx-card)] border border-white/10 shadow-md">
+                    <div className="relative aspect-square w-full rounded-[var(--mx-radius)] overflow-hidden bg-[var(--mx-card)] border border-[color:var(--mx-border)] shadow-md">
                       <img
                         src={selectedGalleryImage || currentProduct.mainImage}
                         alt={currentProduct.faTitle}
@@ -781,7 +781,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             className={`w-12 h-12 rounded-[calc(var(--mx-radius)*0.75)] overflow-hidden shrink-0 border-2 transition cursor-pointer ${
                               (selectedGalleryImage || currentProduct.mainImage) === imgUrl
                                 ? 'border-[color:var(--mx-accent)] scale-105'
-                                : 'border-white/10 opacity-70 hover:opacity-100'
+                                : 'border-[color:var(--mx-border)] opacity-70 hover:opacity-100'
                             }`}
                           >
                             <img src={imgUrl} alt="" className="w-full h-full object-cover" />
@@ -823,28 +823,28 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       isDarkMode ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'
                     }`}
                   >
-                    <div className="flex items-center justify-between pb-1 border-b border-white/10">
+                    <div className="flex items-center justify-between pb-1 border-b border-[color:var(--mx-border)]">
                       <span className="text-[11px] font-bold flex items-center gap-1 text-[color:var(--mx-ok)]">
                         <Layers className="w-3.5 h-3.5" />
                         جدول قیمت‌های پلکانی عمده
                       </span>
                       {/* Currency Switcher */}
-                      <div className="flex items-center gap-1 text-[9px] bg-black/30 p-0.5 rounded-[calc(var(--mx-radius)*0.55)] border border-white/10">
+                      <div className="flex items-center gap-1 text-[9px] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] p-0.5 rounded-[calc(var(--mx-radius)*0.55)] border border-[color:var(--mx-border)]">
                         <button
                           onClick={() => setDisplayCurrency('TOMAN')}
-                          className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[#5288c1] text-[color:var(--mx-text)] font-bold' : 'opacity-70'}`}
+                          className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                         >
                           تومان
                         </button>
                         <button
                           onClick={() => setDisplayCurrency('USD')}
-                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[#5288c1] text-[color:var(--mx-text)] font-bold' : 'opacity-70'}`}
+                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                         >
                           $
                         </button>
                         <button
                           onClick={() => setDisplayCurrency('CNY')}
-                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[#5288c1] text-[color:var(--mx-text)] font-bold' : 'opacity-70'}`}
+                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                         >
                           ¥
                         </button>
@@ -858,8 +858,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             key={idx}
                             className={`p-2 rounded-[calc(var(--mx-radius)*0.75)] border text-[10px] space-y-0.5 ${
                               orderQuantity >= tier.minQuantity && (!tier.maxQuantity || orderQuantity <= tier.maxQuantity)
-                                ? 'bg-[#5288c1]/20 border-[#5288c1] font-bold text-[color:var(--mx-accent)]'
-                                : 'bg-black/20 border-white/10 opacity-80'
+                                ? 'bg-[var(--mx-btn)]/20 border-[color:var(--mx-btn)] font-bold text-[color:var(--mx-accent)]'
+                                : 'bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border-[color:var(--mx-border)] opacity-80'
                             }`}
                           >
                             <div className="opacity-70 text-[9px]">
@@ -902,16 +902,16 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setOrderQuantity(Math.max(currentProduct.moq, orderQuantity - 10))}
-                          className="w-6 h-6 rounded-[calc(var(--mx-radius)*0.55)] bg-black/40 hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
+                          className="w-6 h-6 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-black/30 text-[color:var(--mx-price)]">
+                        <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] text-[color:var(--mx-price)]">
                           {orderQuantity} عدد
                         </span>
                         <button
                           onClick={() => setOrderQuantity(orderQuantity + 10)}
-                          className="w-6 h-6 rounded-[calc(var(--mx-radius)*0.55)] bg-black/40 hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
+                          className="w-6 h-6 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -925,12 +925,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       step={10}
                       value={orderQuantity}
                       onChange={(e) => setOrderQuantity(Number(e.target.value))}
-                      className="w-full accent-[#5288c1] cursor-pointer"
+                      className="w-full accent-[var(--mx-accent)] cursor-pointer"
                     />
 
                     {/* Live Calculated Price Summary */}
                     {currentPricing && previewAsApproved && (
-                      <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-black/30 border border-white/10 flex items-center justify-between text-xs">
+                      <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] flex items-center justify-between text-xs">
                         <div>
                           <div className="text-[9px] opacity-70">قیمت واحد در این تیراژ:</div>
                           <div className="font-bold text-[color:var(--mx-ok)] font-mono">
@@ -961,7 +961,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         value={customerInquiryNotes}
                         onChange={(e) => setCustomerInquiryNotes(e.target.value)}
                         placeholder="مثال: درخواست رنگ‌بندی خاص، نمونه تستی، ترخیص در گمرک غرب تهران..."
-                        className="w-full bg-black/30 border border-white/15 rounded-[calc(var(--mx-radius)*0.75)] p-2 text-[11px] focus:outline-none focus:border-[color:var(--mx-accent)] placeholder:opacity-40 resize-none"
+                        className="w-full bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] rounded-[calc(var(--mx-radius)*0.75)] p-2 text-[11px] focus:outline-none focus:border-[color:var(--mx-accent)] placeholder:opacity-40 resize-none"
                       />
                     </div>
                   </div>
@@ -973,7 +973,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         isDarkMode ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'
                       }`}
                     >
-                      <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-white/10">
+                      <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-[color:var(--mx-border)]">
                         <Info className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
                         <span>مشخصات فنی و استانداردهای کالا:</span>
                       </div>
@@ -994,7 +994,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       isDarkMode ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'
                     }`}
                   >
-                    <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-white/10">
+                    <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-[color:var(--mx-border)]">
                       <FileText className="w-3.5 h-3.5 text-[color:var(--mx-price)]" />
                       <span>ویژگی‌های کلیدی و توضیحات جامع:</span>
                     </div>
@@ -1003,7 +1003,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         <li key={i}>{f}</li>
                       ))}
                     </ul>
-                    <p className="pt-2 border-t border-white/10" style={{ fontSize: t.roles.body.size, fontWeight: t.roles.body.weight, color: t.roles.body.color, lineHeight: t.roles.body.lineHeight, whiteSpace: 'pre-line' }}>
+                    <p className="pt-2 border-t border-[color:var(--mx-border)]" style={{ fontSize: t.roles.body.size, fontWeight: t.roles.body.weight, color: t.roles.body.color, lineHeight: t.roles.body.lineHeight, whiteSpace: 'pre-line' }}>
                       {currentProduct.faFullDesc}
                     </p>
                   </div>
@@ -1039,25 +1039,25 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         <div className="flex items-center gap-1 text-[9px] bg-[color-mix(in_srgb,var(--mx-card)_80%,transparent)] p-0.5 rounded-[calc(var(--mx-radius)*0.55)] border border-[color:var(--mx-border)]">
                           <button
                             onClick={() => setDisplayCurrency('TOMAN')}
-                            className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[#5288c1] text-[color:var(--mx-text)] font-bold' : 'opacity-70'}`}
+                            className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             تومان
                           </button>
                           <button
                             onClick={() => setDisplayCurrency('USD')}
-                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[#5288c1] text-[color:var(--mx-text)] font-bold' : 'opacity-70'}`}
+                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             $
                           </button>
                           <button
                             onClick={() => setDisplayCurrency('CNY')}
-                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[#5288c1] text-[color:var(--mx-text)] font-bold' : 'opacity-70'}`}
+                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             ¥
                           </button>
                           <button
                             onClick={() => setDisplayCurrency('AED')}
-                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'AED' ? 'bg-[#5288c1] text-[color:var(--mx-text)] font-bold' : 'opacity-70'}`}
+                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'AED' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             درهم
                           </button>
@@ -1073,7 +1073,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           onClick={() => setActiveCategory(cat)}
                           className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
                             activeCategory === cat
-                              ? 'bg-[var(--mx-accent)] text-[color:var(--mx-text)] font-bold shadow-sm shadow-[var(--mx-accent)]/30'
+                              ? 'bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] font-bold shadow-sm shadow-[var(--mx-accent)]/30'
                               : isDarkMode
                               ? 'bg-[var(--mx-border)] text-[color:var(--mx-body)]'
                               : 'bg-[var(--mx-card)] text-[color:var(--mx-muted)]'
@@ -1106,7 +1106,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           }}
                           className={`rounded-[var(--mx-radius)] p-2 cursor-pointer transition flex flex-col justify-between border hover:scale-[1.02] active:scale-95 ${
                             isDarkMode
-                              ? 'bg-[var(--mx-card)] border-[#293747] hover:border-[#5288c1]'
+                              ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-btn)]'
                               : 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-accent)]'
                           }`}
                         >
@@ -1149,7 +1149,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               <div className="text-[9px] opacity-60">حداقل: {item.moq} عدد</div>
                             </div>
 
-                            <button className="w-full py-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[#5288c1]/20 hover:bg-[#5288c1]/30 text-[#5288c1] dark:text-[color:var(--mx-accent)] text-[10px] font-bold flex items-center justify-center gap-1">
+                            <button className="w-full py-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[var(--mx-btn)]/20 hover:bg-[var(--mx-btn)]/30 text-[color:var(--mx-accent)] dark:text-[color:var(--mx-accent)] text-[10px] font-bold flex items-center justify-center gap-1">
                               <span>مشاهده و استعلام</span>
                               <ChevronLeft className="w-3 h-3" />
                             </button>
@@ -1277,7 +1277,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
   if (isStandalone) {
     return (
-      <div style={themeVars} className="w-full min-h-screen bg-[#0e1621] flex flex-col items-center justify-start selection:bg-[var(--mx-btn)] selection:text-[color:var(--mx-btn-text)]">
+      <div style={themeVars} className="w-full min-h-screen bg-[var(--mx-page)] flex flex-col items-center justify-start selection:bg-[var(--mx-btn)] selection:text-[color:var(--mx-btn-text)]">
         {/* Desktop Header Bar (hidden on mobile and inside Telegram) */}
         <div className="w-full max-w-lg hidden md:flex items-center justify-between py-2.5 px-4 bg-[color-mix(in_srgb,var(--mx-card)_90%,transparent)] border-b border-[color:var(--mx-border)] text-xs text-[color:var(--mx-body)] z-30">
           <div className="flex items-center gap-2">

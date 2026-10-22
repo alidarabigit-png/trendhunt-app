@@ -2118,7 +2118,7 @@ if ($action === 'save_settings' && $method === 'POST') {
             $in_ui = $in['ui'];
             $u['fontFamily'] = (isset($in_ui['fontFamily']) && in_array($in_ui['fontFamily'], $fonts, true)) ? $in_ui['fontFamily'] : ($u['fontFamily'] ?? 'system-ui');
             foreach (['accent', 'pageBg', 'cardBg', 'cardBorder', 'textColor', 'mutedColor', 'buttonBg', 'buttonText'] as $k) {
-                $dflt = ['accent' => '#E63946', 'pageBg' => '#17212B', 'cardBg' => '#1E2A36', 'cardBorder' => '#2B3B4A', 'textColor' => '#FFFFFF', 'mutedColor' => '#9AA7B4', 'buttonBg' => '#E63946', 'buttonText' => '#FFFFFF'][$k];
+                $dflt = ['accent' => '#4A70A9', 'pageBg' => '#EFECE3', 'cardBg' => '#F8F6F1', 'cardBorder' => '#C9D6EA', 'textColor' => '#000000', 'mutedColor' => '#4A70A9', 'buttonBg' => '#4A70A9', 'buttonText' => '#FFFFFF'][$k];
                 if (isset($in_ui[$k])) $u[$k] = $hex($in_ui[$k], $u[$k] ?? $dflt);
             }
             $u['radius'] = $clampNum($in_ui['radius'] ?? null, 0, 32, $u['radius'] ?? 14);

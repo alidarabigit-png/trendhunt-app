@@ -393,7 +393,7 @@ export const SmartPricingCard: React.FC<SmartPricingCardProps> = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h4 className="font-bold text-xs sm:text-sm text-slate-200 flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-[#E63946]" />
+            <Sparkles className="w-4 h-4 text-[#4A70A9]" />
             <span>سناریوهای پیشنهادی قیمت‌گذاری پلکانی بر اساس کشش بازار</span>
           </h4>
           <span className="text-[11px] text-slate-400">قیمت‌ها با رندسازی به نزدیک‌ترین هزار تومان</span>
