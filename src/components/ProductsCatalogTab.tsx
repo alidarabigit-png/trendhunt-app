@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { CategoryBrandEditor, NormalizeCategoriesButton } from './CategoryBrandEditor';
 import {
   Package,
   Search,
@@ -205,6 +206,8 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+
+            <NormalizeCategoriesButton />
 
             <button
               onClick={() => exportProductsToCSV(products)}
@@ -433,9 +436,11 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
                     <div>
                       {/* Top Badges */}
                       <div className="flex flex-wrap items-center gap-2 mb-2">
-                        <span className="text-[11px] font-semibold px-2.5 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
-                          {product.category}
-                        </span>
+                        <CategoryBrandEditor
+                          product={product}
+                          allCategories={categories.filter((c) => c !== 'همه')}
+                          onSave={(u) => onUpdateProductPricing && onUpdateProductPricing(u)}
+                        />
 
                         <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 font-mono">
                           {product.supplier.platform}

@@ -19,7 +19,7 @@ OBJECT SCHEMA (use exactly these keys)
   "faFullDesc": "Persian, 100-200 words, 2-3 short paragraphs separated by \\n\\n, factual, no hype, no unverifiable claims",
   "faFeatures": ["4-8 short Persian bullets from the source"],
   "technicalSpecs": {"Persian label": "value with units"},  // max 12 real specs only
-  "category": "short Persian product-type name (e.g. شارژر و پاوربانک). Reuse EXACTLY the same name for the same product type across all files.",
+  "category": "EXACTLY one of: پاوربانک و شارژر | پوشیدنی هوشمند | هدفون و صوتی | کیبورد و لوازم گیمینگ | خانه هوشمند و روشنایی | ردیاب و ابزار ارتباطی | آشپزخانه و نوشیدنی | خودرو، سفر و فضای باز | متفرقه  (copy the text exactly; never invent a new category)",
   "tags": ["up to 8 Persian search keywords, include the model number"],
   "mainImage": "direct https image URL if available, else null",
   "images": ["additional direct https image URLs, max 5"],

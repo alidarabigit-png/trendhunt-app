@@ -35,6 +35,7 @@ export interface ProductItem {
   technicalSpecs: Record<string, string>;
   category: string;
   brand?: string;
+  categoryLocked?: boolean;
   subCategory?: string;
   modelOrSku?: string;
   tags: string[];
@@ -235,3 +236,16 @@ export const DEFAULT_MINIAPP_UI: MiniAppUi = {
     button: { size: 13, weight: 700, color: '#FFFFFF', lineHeight: 1.4 },
   },
 };
+
+// دسته‌بندی استاندارد کاتالوگ (باید با catalog_categories در api.php یکی باشد)
+export const CATALOG_CATEGORIES = [
+  'پاوربانک و شارژر',
+  'پوشیدنی هوشمند',
+  'هدفون و صوتی',
+  'کیبورد و لوازم گیمینگ',
+  'خانه هوشمند و روشنایی',
+  'ردیاب و ابزار ارتباطی',
+  'آشپزخانه و نوشیدنی',
+  'خودرو، سفر و فضای باز',
+  'متفرقه',
+];

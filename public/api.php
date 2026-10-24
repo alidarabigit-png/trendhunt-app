@@ -11,7 +11,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-define('API_VERSION', '2026.10.24-v5.2-batch-import');
+define('API_VERSION', '2026.10.24-v5.3-categories');
 define('ROOT_DIR', __DIR__);
 define('DATA_DIR', __DIR__ . '/data');
 define('UPLOADS_DIR', __DIR__ . '/uploads');
@@ -671,6 +671,41 @@ function str_list($arr, $maxItems, $maxLen)
     }
     return $o;
 }
+
+/* ------------------------------------------------------------------ */
+/* دسته‌بندی استاندارد محصولات                                          */
+/* ------------------------------------------------------------------ */
+function catalog_categories()
+{
+    return ['پاوربانک و شارژر', 'پوشیدنی هوشمند', 'هدفون و صوتی', 'کیبورد و لوازم گیمینگ', 'خانه هوشمند و روشنایی',
+            'ردیاب و ابزار ارتباطی', 'آشپزخانه و نوشیدنی', 'خودرو، سفر و فضای باز', 'متفرقه'];
+}
+
+function normalize_category($title, $cat)
+{
+    $rules = [
+        ['خودرو، سفر و فضای باز', ['جامپ استارتر']],
+        ['پاوربانک و شارژر', ['پاوربانک', 'شارژر', 'پاور بانک']],
+        ['پوشیدنی هوشمند', ['ساعت هوشمند', 'مچ‌بند', 'دستبند', 'حلقه هوشمند', 'عینک']],
+        ['هدفون و صوتی', ['هندزفری', 'هدفون', 'ایرپاد', 'اسپیکر']],
+        ['کیبورد و لوازم گیمینگ', ['کیبورد', 'ماوس', 'گیمینگ']],
+        ['خانه هوشمند و روشنایی', ['ریسه', 'موتور پرده', 'لامپ']],
+        ['ردیاب و ابزار ارتباطی', ['ردیاب', 'هات اسپات', 'مترجم', 'لوکیتور']],
+        ['آشپزخانه و نوشیدنی', ['مخلوط‌کن', 'همزن', 'فلاسک', 'قمقمه', 'ماگ', 'شیکر']],
+        ['خودرو، سفر و فضای باز', ['پنکه']],
+    ];
+    $title = (string)$title;
+    foreach ($rules as $r) {
+        foreach ($r[1] as $k) {
+            if ($k !== '' && mb_strpos($title, $k, 0, 'UTF-8') !== false) {
+                return $r[0];
+            }
+        }
+    }
+    $cat = trim((string)$cat);
+    return in_array($cat, catalog_categories(), true) ? $cat : 'متفرقه';
+}
+
 function build_product($in, $usdRate, $defaultMargin, $cacheImages)
 {
     if (!is_array($in)) {
@@ -785,7 +820,7 @@ function build_product($in, $usdRate, $defaultMargin, $cacheImages)
         'faFullDesc'             => clean(isset($in['faFullDesc']) ? $in['faFullDesc'] : '', 6000),
         'faFeatures'             => str_list(isset($in['faFeatures']) ? $in['faFeatures'] : [], 12, 300),
         'technicalSpecs'         => $specs,
-        'category'               => clean(isset($in['category']) && $in['category'] !== '' ? $in['category'] : 'عمومی', 100),
+        'category'               => !empty($in['_keepCategory']) ? clean(isset($in['category']) && $in['category'] !== '' ? $in['category'] : 'متفرقه', 100) : normalize_category($faTitle, isset($in['category']) ? $in['category'] : ''),
         'tags'                   => str_list(isset($in['tags']) ? $in['tags'] : [], 12, 60),
         'mainImage'              => isset($images[0]) ? $images[0] : '',
         'images'                 => $images,
@@ -1021,6 +1056,7 @@ function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
         }
         $in = [
             '_relaxed' => true,
+            '_keepCategory' => ($categoryAsBrand && $brand !== ''),
             'externalId' => $extId,
             'sourceUrl' => '',
             'originalTitle' => clean(isset($g['originalTitle']) && $g['originalTitle'] ? $g['originalTitle'] : $row['title'], 400),
@@ -1030,7 +1066,7 @@ function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
             'faFeatures' => isset($g['faFeatures']) && is_array($g['faFeatures']) ? $g['faFeatures'] : [],
             'technicalSpecs' => isset($g['technicalSpecs']) && is_array($g['technicalSpecs']) ? $g['technicalSpecs'] : [],
             'category' => ($categoryAsBrand && $brand !== '') ? $brand : $cat,
-            'subCategory' => ($categoryAsBrand && $brand !== '') ? $cat : '',
+            'subCategory' => ($categoryAsBrand && $brand !== '') ? normalize_category($row['title'], $cat) : '',
             'brand' => $brand,
             'modelOrSku' => $sku,
             'tags' => isset($g['tags']) && is_array($g['tags']) ? $g['tags'] : [],
@@ -1963,6 +1999,42 @@ if ($action === 'ingest_batch' && $method === 'POST') {
     unset($r);
     out(['success' => true, 'dry_run' => $dry, 'added' => $added, 'updated' => $updated, 'channel_posted' => $chan['posted'], 'rows' => $rows]);
 }
+
+/* اصلاح دسته‌ها: dry_run=true فقط تغییرات را نشان می‌دهد */
+if ($action === 'normalize_catalog' && $method === 'POST') {
+    require_admin();
+    $dry = !isset($body['dry_run']) || !empty($body['dry_run']);
+    $changes = [];
+    $apply = function () use ($CATALOG_FILE, &$changes, $dry) {
+        $items = read_json($CATALOG_FILE, []);
+        if (!is_array($items)) {
+            return;
+        }
+        foreach ($items as &$it) {
+            if (!is_array($it) || !empty($it['categoryLocked'])) {
+                continue;
+            }
+            $cur = isset($it['category']) ? (string)$it['category'] : '';
+            if (!empty($it['brand']) && $cur === $it['brand']) {
+                continue;
+            }
+            $new = normalize_category(isset($it['faTitle']) ? $it['faTitle'] : '', $cur);
+            if ($new !== $cur) {
+                $changes[] = ['id' => $it['id'] ?? '', 'title' => $it['faTitle'] ?? '', 'from' => $cur, 'to' => $new];
+                $it['category'] = $new;
+            }
+        }
+        unset($it);
+        if (!$dry && $changes) {
+            if (is_file($CATALOG_FILE)) {
+                @copy($CATALOG_FILE, DATA_DIR . '/catalog.bak.json');
+            }
+            write_json($CATALOG_FILE, $items);
+        }
+    };
+    with_lock('catalog', $apply);
+    out(['success' => true, 'dry_run' => $dry, 'changed' => count($changes), 'changes' => $changes, 'categories' => catalog_categories()]);
+}
 if ($action === 'get_pricing_config') {
     require_ingest();
     $st = read_json($SETTINGS_FILE, []);
@@ -2033,7 +2105,7 @@ $adminActions = [
     'get_products_admin', 'save_products', 'upload_image', 'cache_catalog_images',
     'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
-    'channel_post_pending', 'ingest_batch',
+    'channel_post_pending', 'ingest_batch', 'normalize_catalog',
     'mark_posted', // FIXED: اکشن mark_posted به لیست ادمین اضافه شد
 ];
 if (in_array($action, $adminActions, true)) {

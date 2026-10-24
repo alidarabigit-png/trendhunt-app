@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Copy, Check, RefreshCw, Send, AlertCircle } from 'lucide-react';
 import { EXTRACT_PROMPT } from './extractPrompt';
+import { CATALOG_CATEGORIES } from '../types';
 
 // حالت دستی: کپی دیتای خام محصول → پرامپت → پیست JSON از ایجنت بیرونی → انتشار
 const API = '/api.php?action=';
-const CATEGORIES = ['گجت و لوازم دیجیتال', 'صوتی و هوشمند', 'خانه، ورزش و سلامت'];
+const CATEGORIES = CATALOG_CATEGORIES;
 const SITE_BY_PREFIX: Record<string, string> = {
   alibaba: 'Alibaba.com',
   '1688': '1688.com',
