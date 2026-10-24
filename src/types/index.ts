@@ -34,6 +34,9 @@ export interface ProductItem {
   faFeatures: string[];
   technicalSpecs: Record<string, string>;
   category: string;
+  brand?: string;
+  subCategory?: string;
+  modelOrSku?: string;
   tags: string[];
   images: string[];
   mainImage: string;

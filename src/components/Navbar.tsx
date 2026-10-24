@@ -3,6 +3,7 @@ import { User } from 'firebase/auth';
 import {
   Bot,
   Palette,
+  UploadCloud,
   Package,
   Smartphone,
   Send,
@@ -77,6 +78,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     { id: 'manual', label: 'پردازش دستی (JSON)', icon: Workflow },
     { id: 'catalog', label: 'کاتالوگ و مشخصات سئو', icon: Package, badge: productsCount },
     { id: 'miniapp', label: 'مینی‌آپ تلگرام (پیش‌نمایش)', icon: Smartphone },
+    { id: 'batch', label: 'ورود گروهی محصولات', icon: UploadCloud },
     { id: 'appearance', label: 'تنظیمات ظاهر مینی‌اپ', icon: Palette },
     { id: 'telegram', label: 'تولیدکننده پست کانال', icon: Send },
     {

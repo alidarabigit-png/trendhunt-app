@@ -4,6 +4,7 @@ import { Navbar } from './components/Navbar';
 import { ManualProcessTab } from './components/ManualProcessTab';
 import { ProductsCatalogTab } from './components/ProductsCatalogTab';
 import { TelegramMiniAppPreview } from './components/TelegramMiniAppPreview';
+import { BatchImportTab } from './components/BatchImportTab';
 import { AppearanceSettingsTab } from './components/AppearanceSettingsTab';
 import { TelegramPostGeneratorTab } from './components/TelegramPostGeneratorTab';
 import { AdminPanelTab } from './components/AdminPanelTab';
@@ -1029,6 +1030,12 @@ export default function App() {
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {activeTab === 'manual' && <ManualProcessTab />}
+
+        {activeTab === 'batch' && (
+          <BatchImportTab
+            adminKey={typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('nfs_admin_key') : null}
+          />
+        )}
 
         {activeTab === 'appearance' && (
           <AppearanceSettingsTab

@@ -11,7 +11,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-define('API_VERSION', '2026.10.21-v5.1-channel-autopost');
+define('API_VERSION', '2026.10.24-v5.2-batch-import');
 define('ROOT_DIR', __DIR__);
 define('DATA_DIR', __DIR__ . '/data');
 define('UPLOADS_DIR', __DIR__ . '/uploads');
@@ -685,7 +685,8 @@ function build_product($in, $usdRate, $defaultMargin, $cacheImages)
     if ($faTitle === '' || $orig === '') {
         return [null, 'missing title'];
     }
-    if (!is_http_url($src)) {
+    $relaxed = !empty($in['_relaxed']);
+    if (!$relaxed && !is_http_url($src)) {
         return [null, 'missing/invalid sourceUrl'];
     }
     if ($cost <= 0) {
@@ -705,10 +706,10 @@ function build_product($in, $usdRate, $defaultMargin, $cacheImages)
         }
     }
     $images = array_slice(array_values(array_unique($images)), 0, 6);
-    if (!$images) {
+    if (!$images && !$relaxed) {
         return [null, 'no valid image'];
     }
-    if ($cacheImages) {
+    if ($cacheImages && $images) {
         $images = array_map('cache_image', array_slice($images, 0, 4));
     }
 
@@ -786,8 +787,11 @@ function build_product($in, $usdRate, $defaultMargin, $cacheImages)
         'technicalSpecs'         => $specs,
         'category'               => clean(isset($in['category']) && $in['category'] !== '' ? $in['category'] : 'عمومی', 100),
         'tags'                   => str_list(isset($in['tags']) ? $in['tags'] : [], 12, 60),
-        'mainImage'              => $images[0],
+        'mainImage'              => isset($images[0]) ? $images[0] : '',
         'images'                 => $images,
+        'brand'                  => clean(isset($in['brand']) ? $in['brand'] : '', 60),
+        'subCategory'            => clean(isset($in['subCategory']) ? $in['subCategory'] : '', 100),
+        'modelOrSku'             => clean(isset($in['modelOrSku']) ? $in['modelOrSku'] : '', 80),
         'costPerUnitUsd'         => round($cost, 2),
         'costPerUnitCny'         => $costCny,
         'costPerUnitAed'         => $costAed,
@@ -933,6 +937,123 @@ function channel_announce_many($products, $max = 5)
         $errors[] = $e->getMessage();
     }
     return ['posted' => $posted, 'errors' => $errors];
+}
+
+
+/* ------------------------------------------------------------------ */
+/* ورود گروهی محصولات از خروجی ایجنت (کاتالوگ / PDF)                    */
+/* ------------------------------------------------------------------ */
+function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
+{
+    $rates = get_rates_data();
+    $usdRate = (float)(isset($rates['usd']) ? $rates['usd'] : DEFAULT_USD_RATE);
+    if ($usdRate <= 0) {
+        $usdRate = DEFAULT_USD_RATE;
+    }
+    $cnyRate = !empty($rates['cny']) ? (float)$rates['cny'] : ($usdRate / 7.2);
+    $rows = [];
+    foreach (array_slice(array_values((array)$items), 0, 50) as $idx => $g) {
+        $row = ['index' => $idx, 'status' => 'skip', 'reason' => '', 'title' => '', 'sku' => '', 'priceToman' => 0, 'category' => ''];
+        if (!is_array($g)) {
+            $row['reason'] = 'آیتم نامعتبر';
+            $rows[] = $row;
+            continue;
+        }
+        $row['title'] = clean(isset($g['faTitle']) ? $g['faTitle'] : '', 300);
+        $row['sku'] = clean(isset($g['modelOrSku']) ? $g['modelOrSku'] : '', 80);
+        if (isset($g['usable']) && $g['usable'] === false) {
+            $row['reason'] = 'غیرقابل استفاده: ' . clean(isset($g['rejectReason']) ? $g['rejectReason'] : '', 120);
+            $rows[] = $row;
+            continue;
+        }
+        $cur = strtoupper(trim((string)(isset($g['currency']) && $g['currency'] ? $g['currency'] : $currency)));
+        $toUsd = function ($p) use ($cur, $usdRate, $cnyRate) {
+            if ($cur === 'CNY' || $cur === 'RMB') {
+                return $p * ($cnyRate / $usdRate);
+            }
+            if ($cur === 'EUR') {
+                return $p * 1.09;
+            }
+            return $p;
+        };
+        $rawTiers = isset($g['tiers']) && is_array($g['tiers']) ? $g['tiers'] : [];
+        $tiers = [];
+        $base = 0.0;
+        foreach ($rawTiers as $i => $t) {
+            $pr = is_array($t) ? (float)(isset($t['price']) ? $t['price'] : 0) : 0;
+            if ($pr <= 0) {
+                continue;
+            }
+            $usd = $toUsd($pr);
+            if ($base <= 0) {
+                $base = $usd;
+            }
+            $tm = count($tiers) === 0 ? $margin : (count($tiers) === 1 ? max(5, round($margin * 0.8)) : max(5, round($margin * 0.6)));
+            $minQ = max(1, (int)(isset($t['minQuantity']) ? $t['minQuantity'] : 1));
+            $tiers[] = [
+                'minQuantity' => $minQ,
+                'priceUsd' => round($usd * (1 + $tm / 100), 2),
+                'marginPercent' => $tm,
+                'calculatedPriceToman' => (int)(round(($usd * $usdRate * (1 + $tm / 100)) / 1000) * 1000),
+            ];
+        }
+        if ($base <= 0) {
+            $row['reason'] = 'قیمت ندارد';
+            $rows[] = $row;
+            continue;
+        }
+        for ($i = 0; $i < count($tiers) - 1; $i++) {
+            if ($tiers[$i + 1]['minQuantity'] > $tiers[$i]['minQuantity']) {
+                $tiers[$i]['maxQuantity'] = $tiers[$i + 1]['minQuantity'] - 1;
+            }
+        }
+        $cat = clean(isset($g['category']) && $g['category'] ? $g['category'] : 'عمومی', 100);
+        $sku = $row['sku'];
+        $extId = $sku !== '' ? 'sku:' . mb_strtolower($brand . ':' . $sku, 'UTF-8') : '';
+        $imgs = [];
+        foreach ((array)(isset($g['images']) ? $g['images'] : []) as $u) {
+            if (is_http_url($u)) {
+                $imgs[] = $u;
+            }
+        }
+        if (!empty($g['mainImage']) && is_http_url($g['mainImage'])) {
+            array_unshift($imgs, $g['mainImage']);
+        }
+        $in = [
+            '_relaxed' => true,
+            'externalId' => $extId,
+            'sourceUrl' => '',
+            'originalTitle' => clean(isset($g['originalTitle']) && $g['originalTitle'] ? $g['originalTitle'] : $row['title'], 400),
+            'faTitle' => $row['title'],
+            'faShortDesc' => isset($g['faShortDesc']) ? $g['faShortDesc'] : '',
+            'faFullDesc' => isset($g['faFullDesc']) ? $g['faFullDesc'] : '',
+            'faFeatures' => isset($g['faFeatures']) && is_array($g['faFeatures']) ? $g['faFeatures'] : [],
+            'technicalSpecs' => isset($g['technicalSpecs']) && is_array($g['technicalSpecs']) ? $g['technicalSpecs'] : [],
+            'category' => ($categoryAsBrand && $brand !== '') ? $brand : $cat,
+            'subCategory' => ($categoryAsBrand && $brand !== '') ? $cat : '',
+            'brand' => $brand,
+            'modelOrSku' => $sku,
+            'tags' => isset($g['tags']) && is_array($g['tags']) ? $g['tags'] : [],
+            'images' => $imgs,
+            'costPerUnitUsd' => round($base, 2),
+            'targetMarginPercent' => $margin,
+            'moq' => max(1, (int)(isset($g['moq']) && $g['moq'] ? $g['moq'] : $tiers[0]['minQuantity'])),
+            'tieredPricing' => $tiers,
+            'supplier' => isset($g['supplier']) && is_array($g['supplier']) ? $g['supplier'] : [],
+        ];
+        list($prod, $err) = build_product($in, $usdRate, $margin, false);
+        if (!$prod) {
+            $row['reason'] = 'خطا: ' . $err;
+            $rows[] = $row;
+            continue;
+        }
+        $row['status'] = 'ok';
+        $row['product'] = $prod;
+        $row['priceToman'] = (int)$tiers[0]['calculatedPriceToman'];
+        $row['category'] = $prod['category'];
+        $rows[] = $row;
+    }
+    return $rows;
 }
 
 /* ================================================================== */
@@ -1762,6 +1883,86 @@ if ($action === 'ingest_manual_product' && $method === 'POST') {
         'channel_errors' => $chanRes['errors'],
     ]);
 }
+
+/* ورود گروهی: dry_run=true فقط پیش‌نمایش می‌دهد؛ در غیر این صورت در کاتالوگ ثبت می‌کند */
+if ($action === 'ingest_batch' && $method === 'POST') {
+    require_admin();
+    @set_time_limit(120);
+    $items = isset($body['items']) && is_array($body['items']) ? $body['items'] : [];
+    if (!$items) {
+        fail('items خالی است', 422);
+    }
+    $brand = clean(isset($body['brand']) ? $body['brand'] : '', 60);
+    $currency = strtoupper(clean(isset($body['currency']) ? $body['currency'] : 'USD', 5));
+    $stg = read_json($SETTINGS_FILE, []);
+    $margin = (isset($body['margin_percent']) && is_numeric($body['margin_percent'])) ? (float)$body['margin_percent'] : (isset($stg['targetMarginPercent']) ? (float)$stg['targetMarginPercent'] : 25.0);
+    $catAsBrand = !isset($body['category_as_brand']) || !empty($body['category_as_brand']);
+    $dry = !empty($body['dry_run']);
+    $rows = batch_prepare($items, $brand, $currency, $margin, $catAsBrand);
+
+    $added = 0;
+    $updated = 0;
+    $newProducts = [];
+    if (!$dry) {
+        $res = with_lock('catalog', function () use ($CATALOG_FILE, &$rows) {
+            $existing = read_json($CATALOG_FILE, []);
+            if (!is_array($existing)) {
+                $existing = [];
+            }
+            $add = 0;
+            $upd = 0;
+            $fresh = [];
+            foreach ($rows as &$r) {
+                if ($r['status'] !== 'ok') {
+                    continue;
+                }
+                $p = $r['product'];
+                $hit = false;
+                foreach ($existing as &$it) {
+                    if (!empty($p['externalId']) && ($it['externalId'] ?? '') === $p['externalId']) {
+                        $p['id'] = $it['id'] ?? $p['id'];
+                        $p['isPostedToTelegram'] = !empty($it['isPostedToTelegram']);
+                        if (!empty($it['images']) && empty($p['images'])) {
+                            $p['images'] = $it['images'];
+                            $p['mainImage'] = $it['mainImage'] ?? '';
+                        }
+                        $it = $p;
+                        $hit = true;
+                        break;
+                    }
+                }
+                unset($it);
+                if ($hit) {
+                    $upd++;
+                    $r['status'] = 'updated';
+                } else {
+                    array_unshift($existing, $p);
+                    $fresh[] = $p;
+                    $add++;
+                    $r['status'] = 'added';
+                }
+            }
+            unset($r);
+            if (is_file($CATALOG_FILE)) {
+                @copy($CATALOG_FILE, DATA_DIR . '/catalog.bak.json');
+            }
+            write_json($CATALOG_FILE, array_slice($existing, 0, 5000));
+            return ['added' => $add, 'updated' => $upd, 'fresh' => $fresh];
+        });
+        $added = $res['added'];
+        $updated = $res['updated'];
+        $newProducts = $res['fresh'];
+    }
+    $chan = ['posted' => 0, 'errors' => []];
+    if (!$dry && !empty($body['announce']) && $newProducts) {
+        $chan = channel_announce_many($newProducts);
+    }
+    foreach ($rows as &$r) {
+        unset($r['product']);
+    }
+    unset($r);
+    out(['success' => true, 'dry_run' => $dry, 'added' => $added, 'updated' => $updated, 'channel_posted' => $chan['posted'], 'rows' => $rows]);
+}
 if ($action === 'get_pricing_config') {
     require_ingest();
     $st = read_json($SETTINGS_FILE, []);
@@ -1832,7 +2033,7 @@ $adminActions = [
     'get_products_admin', 'save_products', 'upload_image', 'cache_catalog_images',
     'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
-    'channel_post_pending',
+    'channel_post_pending', 'ingest_batch',
     'mark_posted', // FIXED: اکشن mark_posted به لیست ادمین اضافه شد
 ];
 if (in_array($action, $adminActions, true)) {

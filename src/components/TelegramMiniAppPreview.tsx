@@ -52,6 +52,8 @@ interface TelegramMiniAppPreviewProps {
   ui?: MiniAppUi | null;
 }
 
+const PLACEHOLDER_IMG = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#EFECE3"/><rect x="60" y="70" width="80" height="60" rx="8" fill="none" stroke="#8FABD4" stroke-width="4"/><circle cx="82" cy="90" r="7" fill="#8FABD4"/><path d="M66 124l24-22 16 14 12-10 18 18z" fill="#4A70A9"/></svg>');
+
 export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   products,
   selectedProduct,
@@ -759,7 +761,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   <div className="space-y-2">
                     <div className="relative aspect-square w-full rounded-[var(--mx-radius)] overflow-hidden bg-[var(--mx-card)] border border-[color:var(--mx-border)] shadow-md">
                       <img
-                        src={selectedGalleryImage || currentProduct.mainImage}
+                        src={selectedGalleryImage || currentProduct.mainImage || PLACEHOLDER_IMG}
                         alt={currentProduct.faTitle}
                         className="w-full h-full object-cover transition duration-300"
                       />
@@ -1113,7 +1115,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           <div className="space-y-1.5">
                             <div className="relative aspect-square rounded-[calc(var(--mx-radius)*0.75)] overflow-hidden bg-[var(--mx-card)]">
                               <img
-                                src={item.mainImage}
+                                src={item.mainImage || PLACEHOLDER_IMG}
                                 alt={item.faTitle}
                                 className="w-full h-full object-cover"
                               />
