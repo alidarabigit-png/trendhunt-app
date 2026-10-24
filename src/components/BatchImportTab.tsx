@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { UploadCloud, Eye, CheckCircle2, AlertTriangle, Loader2, X, Copy } from 'lucide-react';
 import { BATCH_AGENT_INSTRUCTION } from './agentInstruction';
+import { BulkImageAttach } from './BulkImageAttach';
 
 interface BatchImportTabProps {
   adminKey: string | null;
@@ -351,6 +352,8 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
           )}
         </div>
       )}
+
+      <BulkImageAttach adminKey={adminKey} />
     </div>
   );
 };

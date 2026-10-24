@@ -11,7 +11,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-define('API_VERSION', '2026.10.24-v5.3-categories');
+define('API_VERSION', '2026.10.24-v5.4-bulk-images');
 define('ROOT_DIR', __DIR__);
 define('DATA_DIR', __DIR__ . '/data');
 define('UPLOADS_DIR', __DIR__ . '/uploads');
@@ -2051,6 +2051,72 @@ if ($action === 'normalize_catalog' && $method === 'POST') {
     with_lock('catalog', $apply);
     out(['success' => true, 'dry_run' => $dry, 'changed' => count($changes), 'changes' => $changes, 'categories' => catalog_categories()]);
 }
+
+/* اتصال عکس‌های آپلودشده به محصولات بر اساس کد مدل (modelOrSku) یا id */
+if ($action === 'attach_images' && $method === 'POST') {
+    require_admin();
+    $in = isset($body['items']) && is_array($body['items']) ? array_slice($body['items'], 0, 200) : [];
+    if (!$in) {
+        fail('items خالی است', 422);
+    }
+    $res = with_lock('catalog', function () use ($CATALOG_FILE, $in) {
+        $items = read_json($CATALOG_FILE, []);
+        if (!is_array($items)) {
+            return ['matched' => 0, 'unmatched' => array_map(function ($x) { return $x['key'] ?? ''; }, $in)];
+        }
+        $matched = 0;
+        $unmatched = [];
+        foreach ($in as $row) {
+            $key = mb_strtolower(trim((string)($row['key'] ?? '')), 'UTF-8');
+            $urls = [];
+            foreach ((array)($row['urls'] ?? []) as $u) {
+                if (is_string($u) && preg_match('#^(/uploads/[A-Za-z0-9_.-]+|https?://[^\s]+)$#', $u)) {
+                    $urls[] = $u;
+                }
+            }
+            if ($key === '' || !$urls) {
+                $unmatched[] = $key;
+                continue;
+            }
+            $idx = -1;
+            foreach ($items as $i => $it) {
+                if (!is_array($it)) {
+                    continue;
+                }
+                if (mb_strtolower((string)($it['id'] ?? ''), 'UTF-8') === $key || mb_strtolower((string)($it['modelOrSku'] ?? ''), 'UTF-8') === $key) {
+                    $idx = $i;
+                    break;
+                }
+            }
+            if ($idx < 0 && mb_strlen($key, 'UTF-8') >= 5) {
+                foreach ($items as $i => $it) {
+                    $hay = mb_strtolower(($it['faTitle'] ?? '') . ' ' . ($it['originalTitle'] ?? ''), 'UTF-8');
+                    if (is_array($it) && mb_strpos($hay, $key, 0, 'UTF-8') !== false) {
+                        $idx = $i;
+                        break;
+                    }
+                }
+            }
+            if ($idx < 0) {
+                $unmatched[] = $key;
+                continue;
+            }
+            $cur = isset($items[$idx]['images']) && is_array($items[$idx]['images']) ? $items[$idx]['images'] : [];
+            $merged = array_slice(array_values(array_unique(array_merge($urls, $cur))), 0, 8);
+            $items[$idx]['images'] = $merged;
+            $items[$idx]['mainImage'] = $merged[0];
+            $matched++;
+        }
+        if ($matched) {
+            if (is_file($CATALOG_FILE)) {
+                @copy($CATALOG_FILE, DATA_DIR . '/catalog.bak.json');
+            }
+            write_json($CATALOG_FILE, $items);
+        }
+        return ['matched' => $matched, 'unmatched' => array_values(array_unique($unmatched))];
+    });
+    out(['success' => true, 'matched' => $res['matched'], 'unmatched' => $res['unmatched']]);
+}
 if ($action === 'get_pricing_config') {
     require_ingest();
     $st = read_json($SETTINGS_FILE, []);
@@ -2121,7 +2187,7 @@ $adminActions = [
     'get_products_admin', 'save_products', 'upload_image', 'cache_catalog_images',
     'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
-    'channel_post_pending', 'ingest_batch', 'normalize_catalog',
+    'channel_post_pending', 'ingest_batch', 'normalize_catalog', 'attach_images',
     'mark_posted', // FIXED: اکشن mark_posted به لیست ادمین اضافه شد
 ];
 if (in_array($action, $adminActions, true)) {
