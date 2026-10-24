@@ -205,7 +205,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
         {/* Modal Header */}
         <div className="p-5 border-b border-slate-800 flex items-center justify-between bg-slate-950/70">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#E63946] to-rose-600 flex items-center justify-center text-white font-bold shadow-lg shadow-red-500/20">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#4A70A9] to-rose-600 flex items-center justify-center text-white font-bold shadow-lg shadow-red-500/20">
               <Globe className="w-5 h-5" />
             </div>
             <div>
@@ -213,7 +213,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
                 <h3 className="font-extrabold text-sm sm:text-base text-white">
                   انتقال محصول به سایت نفیس‌استور (NafisStore)
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E63946]/20 text-[#FF4D6D] border border-[#E63946]/30">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#4A70A9]/20 text-[#8FABD4] border border-[#4A70A9]/30">
                   WooCommerce Ready
                 </span>
               </div>
@@ -237,7 +237,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
             onClick={() => setActiveTab('preview')}
             className={`pb-2.5 px-3 text-xs font-bold transition border-b-2 flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'preview'
-                ? 'border-[#E63946] text-[#FF4D6D]'
+                ? 'border-[#4A70A9] text-[#8FABD4]'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
@@ -249,7 +249,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
             onClick={() => setActiveTab('json')}
             className={`pb-2.5 px-3 text-xs font-bold transition border-b-2 flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'json'
-                ? 'border-[#E63946] text-[#FF4D6D]'
+                ? 'border-[#4A70A9] text-[#8FABD4]'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
@@ -261,7 +261,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
             onClick={() => setActiveTab('settings')}
             className={`pb-2.5 px-3 text-xs font-bold transition border-b-2 flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'settings'
-                ? 'border-[#E63946] text-[#FF4D6D]'
+                ? 'border-[#4A70A9] text-[#8FABD4]'
                 : 'border-transparent text-slate-400 hover:text-white'
             }`}
           >
@@ -303,7 +303,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
                   type="text"
                   value={seoTitle}
                   onChange={(e) => setSeoTitle(e.target.value)}
-                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-[#E63946]"
+                  className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white font-medium focus:outline-none focus:border-[#4A70A9]"
                 />
               </div>
 
@@ -317,7 +317,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
                     type="text"
                     value={seoSlug}
                     onChange={(e) => setSeoSlug(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sky-400 font-mono text-left focus:outline-none focus:border-[#E63946]"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-sky-400 font-mono text-left focus:outline-none focus:border-[#4A70A9]"
                     dir="ltr"
                   />
                   <span className="text-[10px] text-slate-500 block pt-0.5">
@@ -333,7 +333,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
                     type="text"
                     value={metaFocusKeyword}
                     onChange={(e) => setMetaFocusKeyword(e.target.value)}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#E63946]"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-[#4A70A9]"
                   />
                 </div>
               </div>
@@ -346,7 +346,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
                     type="number"
                     value={regularPriceToman}
                     onChange={(e) => setRegularPriceToman(Number(e.target.value))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-amber-300 font-mono font-bold focus:outline-none focus:border-[#E63946]"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-amber-300 font-mono font-bold focus:outline-none focus:border-[#4A70A9]"
                   />
                   <span className="text-[10px] text-slate-500">قیمت خط‌خورده در صفحه محصول</span>
                 </div>
@@ -357,7 +357,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
                     type="number"
                     value={salePriceToman}
                     onChange={(e) => setSalePriceToman(Number(e.target.value))}
-                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold focus:outline-none focus:border-[#E63946]"
+                    className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold focus:outline-none focus:border-[#4A70A9]"
                   />
                   <span className="text-[10px] text-slate-500">قیمت نهایی پرداخت مشتری با تخفیف</span>
                 </div>
@@ -408,7 +408,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
 
                   <button
                     onClick={handleDownloadCsv}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#E63946]/20 hover:bg-[#E63946]/30 text-[#FF4D6D] border border-[#E63946]/40 transition"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#4A70A9]/20 hover:bg-[#4A70A9]/30 text-[#8FABD4] border border-[#4A70A9]/40 transition"
                   >
                     <Download className="w-3.5 h-3.5" />
                     <span>دانلود CSV ووکامرس</span>
@@ -427,7 +427,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
             <div className="space-y-4">
               <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 space-y-3">
                 <h4 className="font-bold text-white text-xs flex items-center gap-2">
-                  <Settings className="w-4 h-4 text-[#E63946]" />
+                  <Settings className="w-4 h-4 text-[#4A70A9]" />
                   <span>پیکربندی کلیدهای REST API فروشگاه NafisStore:</span>
                 </h4>
 
@@ -497,7 +497,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
         {/* Modal Action Footer */}
         <div className="p-4 border-t border-slate-800 bg-slate-950/90 flex items-center justify-between">
           <div className="text-[11px] text-slate-400 flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#E63946]"></span>
+            <span className="w-2 h-2 rounded-full bg-[#4A70A9]"></span>
             <span>انتشار با هوش مصنوعی در سایت <strong>nafisstore.com</strong></span>
           </div>
 
@@ -512,7 +512,7 @@ export const WebStoreSyncModal: React.FC<WebStoreSyncModalProps> = ({
             <button
               onClick={handlePublishToWebStore}
               disabled={isPublishing}
-              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#E63946] to-rose-600 hover:from-red-600 hover:to-rose-500 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 transition disabled:opacity-50 cursor-pointer"
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-[#4A70A9] to-rose-600 hover:from-red-600 hover:to-rose-500 text-white font-bold rounded-xl shadow-lg shadow-red-500/20 transition disabled:opacity-50 cursor-pointer"
             >
               {isPublishing ? (
                 <>

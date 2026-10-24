@@ -110,13 +110,13 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
       </div>
 
       {/* Sub Tabs: Inquiries vs Customers */}
-      <div className="flex border-b border-slate-800 gap-3 pb-2">
+      <div className="flex flex-wrap border-b border-slate-800 gap-3 pb-2">
         <button
           onClick={() => setActiveAdminSubTab('inquiries')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeAdminSubTab === 'inquiries'
-              ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/30'
-              : 'text-slate-400 hover:text-white bg-[#0F172A]'
+              ? 'bg-[#4A70A9] text-white shadow-md shadow-[#4A70A9]/30'
+              : 'text-slate-400 hover:text-white bg-[#0B111C]'
           }`}
         >
           <MessageSquare className="w-4 h-4" />
@@ -127,14 +127,14 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           onClick={() => setActiveAdminSubTab('customers')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeAdminSubTab === 'customers'
-              ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/30'
-              : 'text-slate-400 hover:text-white bg-[#0F172A]'
+              ? 'bg-[#4A70A9] text-white shadow-md shadow-[#4A70A9]/30'
+              : 'text-slate-400 hover:text-white bg-[#0B111C]'
           }`}
         >
           <Users className="w-4 h-4" />
           <span>تایید و مدیریت همکاران و مشتریان ({customers.length})</span>
           {pendingCustomers.length > 0 && (
-            <span className="bg-[#E63946] text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+            <span className="bg-[#4A70A9] text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
               {pendingCustomers.length}
             </span>
           )}
@@ -144,13 +144,14 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           onClick={() => setActiveAdminSubTab('currency')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeAdminSubTab === 'currency'
-              ? 'bg-[#E63946] text-white shadow-md shadow-[#E63946]/30'
-              : 'text-slate-400 hover:text-white bg-[#0F172A]'
+              ? 'bg-[#4A70A9] text-white shadow-md shadow-[#4A70A9]/30'
+              : 'text-slate-400 hover:text-white bg-[#0B111C]'
           }`}
         >
           <TrendingUp className="w-4 h-4" />
           <span>تحلیل نوسانات درهم و یوان (Recharts)</span>
         </button>
+
 
         {onClearDemoData && (
           isConfirmingClear ? (
@@ -191,6 +192,7 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
 
       {/* View 3: Recharts Currency Fluctuation Chart */}
       {activeAdminSubTab === 'currency' && <CurrencyFluctuationChart />}
+
 
       {/* View 1: Inquiries Management & Quick CRM Chat */}
       {activeAdminSubTab === 'inquiries' && (

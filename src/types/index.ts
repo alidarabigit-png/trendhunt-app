@@ -44,6 +44,9 @@ export interface ProductItem {
   costPerUnitCny?: number;
   costPerUnitAed?: number;
   estimatedMarginPercent: number;
+  weightKg?: number;
+  routeType?: 'china_dubai_iran' | 'china_iran_direct' | 'dubai_iran';
+  customsPerKg?: number;
   supplier: SupplierInfo;
   isSyncedToSheets: boolean;
   syncedSheetRowId?: string;
@@ -167,3 +170,65 @@ export interface MiniAppNotification {
   productTitle?: string;
   productImage?: string;
 }
+
+// ---------- ظاهر مینی‌اپ (تنظیمات ظاهر پنل مدیریت) ----------
+export type MiniAppRoleKey = 'heading' | 'body' | 'small' | 'price' | 'button';
+
+export interface MiniAppRoleStyle {
+  size: number;      // px
+  weight: number;    // 300..900
+  color: string;     // #RRGGBB
+  lineHeight: number;
+}
+
+export interface MiniAppUi {
+  fontFamily: string;
+  accent: string;
+  pageBg: string;
+  cardBg: string;
+  cardBorder: string;
+  textColor: string;
+  mutedColor: string;
+  buttonBg: string;
+  buttonText: string;
+  radius: number;    // px
+  roles: Record<MiniAppRoleKey, MiniAppRoleStyle>;
+}
+
+export const MINIAPP_FONTS = ['system-ui', 'Tahoma', 'Segoe UI', 'Arial', 'Vazirmatn'] as const;
+
+export const MINIAPP_ROLE_LABELS: Record<MiniAppRoleKey, string> = {
+  heading: 'عنوان کالا',
+  body: 'متن توضیحات',
+  small: 'ویژگی‌ها و مشخصات',
+  price: 'قیمت',
+  button: 'متن دکمه‌ها',
+};
+
+export const MINIAPP_ROLE_RANGES: Record<MiniAppRoleKey, { size: [number, number] }> = {
+  heading: { size: [12, 28] },
+  body: { size: [10, 20] },
+  small: { size: [9, 16] },
+  price: { size: [11, 24] },
+  button: { size: [10, 18] },
+};
+
+export const DEFAULT_MINIAPP_UI: MiniAppUi = {
+  fontFamily: 'system-ui',
+  accent: '#4A70A9',
+  pageBg: '#EFECE3',
+  cardBg: '#F8F6F1',
+  cardBorder: '#C9D6EA',
+  textColor: '#000000',
+  mutedColor: '#4A70A9',
+  buttonBg: '#4A70A9',
+  buttonText: '#FFFFFF',
+  radius: 14,
+  roles: {
+    heading: { size: 15, weight: 800, color: '#000000', lineHeight: 1.6 },
+    body: { size: 13, weight: 400, color: '#1B2430', lineHeight: 1.9 },
+    small: { size: 12, weight: 400, color: '#4A70A9', lineHeight: 1.8 },
+    price: { size: 16, weight: 800, color: '#4A70A9', lineHeight: 1.4 },
+    button: { size: 13, weight: 700, color: '#FFFFFF', lineHeight: 1.4 },
+  },
+};

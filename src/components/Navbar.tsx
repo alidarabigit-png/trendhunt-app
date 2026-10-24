@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { User } from 'firebase/auth';
 import {
   Bot,
+  Palette,
   Package,
   Smartphone,
   Send,
@@ -73,9 +74,10 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
 
   const tabs = [
-    { id: 'agent', label: 'ایجنت رصد و شکار کالا', icon: Bot, badge: 'خودکار' },
+    { id: 'manual', label: 'پردازش دستی (JSON)', icon: Workflow },
     { id: 'catalog', label: 'کاتالوگ و مشخصات سئو', icon: Package, badge: productsCount },
     { id: 'miniapp', label: 'مینی‌آپ تلگرام (پیش‌نمایش)', icon: Smartphone },
+    { id: 'appearance', label: 'تنظیمات ظاهر مینی‌اپ', icon: Palette },
     { id: 'telegram', label: 'تولیدکننده پست کانال', icon: Send },
     {
       id: 'admin',
@@ -91,8 +93,6 @@ export const Navbar: React.FC<NavbarProps> = ({
       badge: currentCustomer?.status === 'approved' ? 'تایید شده' : 'در انتظار',
       badgeColor: currentCustomer?.status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950',
     },
-    { id: 'sheets', label: 'گوگل شیت و درایو', icon: FileSpreadsheet, badge: syncedSheetsCount > 0 ? `${syncedSheetsCount} ثبت` : undefined },
-    { id: 'automation', label: 'راهنمای اتوماسیون 100%', icon: Workflow },
   ];
 
   const handleTabClick = (tabId: string) => {
@@ -110,7 +110,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               {/* Mobile Drawer Trigger (Right-aligned in RTL) */}
               <button
                 onClick={() => setIsMobileDrawerOpen(true)}
-                className="lg:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#FF4D6D] border border-slate-700 transition cursor-pointer"
+                className="lg:hidden p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-[#8FABD4] border border-slate-700 transition cursor-pointer"
                 aria-label="باز کردن منوی کشویی"
               >
                 <Menu className="w-5 h-5" />
@@ -125,7 +125,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div
                 onClick={onOpenCurrencyModal}
                 title="کلیک کنید برای مشاهده جزییات، استعلام یا ویرایش دستی نرخ ارز"
-                className="hidden lg:flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs cursor-pointer transition hover:border-[#E63946]/50 shadow-sm"
+                className="hidden lg:flex items-center gap-2 bg-slate-800/90 hover:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-700/80 text-xs cursor-pointer transition hover:border-[#4A70A9]/50 shadow-sm"
               >
                 <div className="flex items-center gap-1.5 text-slate-300">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="نرخ ارز زنده است"></span>
@@ -136,9 +136,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                     }}
                     disabled={isRefreshingRates}
                     title="بروزرسانی زنده نرخ ارز از سایت‌های TGJU / AlanChand"
-                    className="flex items-center gap-1 text-slate-400 hover:text-[#FF4D6D] transition"
+                    className="flex items-center gap-1 text-slate-400 hover:text-[#8FABD4] transition"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingRates ? 'animate-spin text-[#E63946]' : ''}`} />
+                    <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingRates ? 'animate-spin text-[#4A70A9]' : ''}`} />
                   </button>
                   <span className="text-[10px] hidden xl:inline text-slate-400 font-bold">نرخ ارز:</span>
                 </div>
@@ -184,7 +184,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={onSwitchToMiniApp}
                   title="مشاهده مستقیم مینی‌آپ تمام‌صفحه خریداران در تلگرام"
-                  className="hidden md:flex items-center gap-1.5 bg-[#2481cc] hover:bg-[#1f72b5] text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-md transition cursor-pointer"
+                  className="hidden md:flex items-center gap-1.5 bg-[#4A70A9] hover:bg-[#3A5A8A] text-white font-bold px-3 py-1.5 rounded-xl text-xs shadow-md transition cursor-pointer"
                 >
                   <Smartphone className="w-4 h-4" />
                   <span>مشاهده مینی‌آپ تلگرام</span>
@@ -270,11 +270,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                   onClick={() => handleTabClick(tab.id)}
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs whitespace-nowrap transition cursor-pointer ${
                     isActive
-                      ? 'bg-[#BA0C2F] text-white dark:bg-[#E63946]/20 dark:text-[#FF4D6D] border border-[#BA0C2F] dark:border-[#E63946]/50 shadow-sm font-bold'
+                      ? 'bg-[#3A5A8A] text-white dark:bg-[#4A70A9]/20 dark:text-[#8FABD4] border border-[#3A5A8A] dark:border-[#4A70A9]/50 shadow-sm font-bold'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium'
                   }`}
                 >
-                  <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#FF4D6D]' : 'text-slate-500 dark:text-slate-400'}`} />
+                  <Icon className={`w-4 h-4 ${isActive ? 'text-white dark:text-[#8FABD4]' : 'text-slate-500 dark:text-slate-400'}`} />
                   <span>{tab.label}</span>
                   {tab.badge !== undefined && (
                     <span
@@ -348,7 +348,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 setIsMobileDrawerOpen(false);
                 onSwitchToMiniApp();
               }}
-              className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-[#2481cc] to-[#1d6fa5] text-white font-bold text-xs shadow-lg transition cursor-pointer"
+              className="w-full flex items-center justify-between p-3 rounded-2xl bg-gradient-to-r from-[#4A70A9] to-[#1d6fa5] text-white font-bold text-xs shadow-lg transition cursor-pointer"
             >
               <div className="flex items-center gap-2">
                 <Smartphone className="w-4 h-4" />

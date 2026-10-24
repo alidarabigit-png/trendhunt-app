@@ -37,7 +37,7 @@ export const NfsLogo: React.FC<NfsLogoProps> = ({
           {/* Outer Red Geometric Contour */}
           <path
             d="M 22 135 L 22 48 Q 22 26 44 26 L 142 128 Q 152 138 160 130 L 160 30"
-            stroke="#BA0C2F"
+            stroke="#3A5A8A"
             strokeWidth="8"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -63,7 +63,7 @@ export const NfsLogo: React.FC<NfsLogoProps> = ({
           {/* Right Red Accent Stroke of N */}
           <path
             d="M 152 30 L 152 118"
-            stroke="#BA0C2F"
+            stroke="#3A5A8A"
             strokeWidth="6"
             strokeLinecap="round"
             fill="none"
@@ -100,7 +100,7 @@ export const NfsLogo: React.FC<NfsLogoProps> = ({
           {/* Middle Red Accent Speed Needle */}
           <path
             d="M 444 80 L 322 80 Q 312 80 312 87 Q 312 94 322 94 L 388 94"
-            stroke="#BA0C2F"
+            stroke="#3A5A8A"
             strokeWidth="6"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -110,7 +110,7 @@ export const NfsLogo: React.FC<NfsLogoProps> = ({
           {/* Bottom Red Aerodynamic Track Sweep */}
           <path
             d="M 205 152 L 370 152 Q 412 152 412 118 Q 412 90 388 90 L 338 90"
-            stroke="#BA0C2F"
+            stroke="#3A5A8A"
             strokeWidth="7"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -126,9 +126,9 @@ export const NfsLogo: React.FC<NfsLogoProps> = ({
             <span
               className={`tracking-normal text-slate-900 dark:text-white transition-colors leading-tight ${titleSizes[size]}`}
             >
-              نفیس تجارت <span className="text-[#BA0C2F] dark:text-[#FF4D6D] font-black">هوشمند</span>
+              نفیس تجارت <span className="text-[#3A5A8A] dark:text-[#8FABD4] font-black">هوشمند</span>
             </span>
-            <span className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded-md bg-rose-600/10 dark:bg-rose-500/20 text-[#BA0C2F] dark:text-[#FF4D6D] border border-rose-500/30">
+            <span className="text-[9px] font-mono font-black px-1.5 py-0.5 rounded-md bg-rose-600/10 dark:bg-rose-500/20 text-[#3A5A8A] dark:text-[#8FABD4] border border-rose-500/30">
               NFS
             </span>
           </div>

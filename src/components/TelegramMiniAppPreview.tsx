@@ -15,8 +15,6 @@ import {
   MessageSquare,
   ShoppingCart,
   Check,
-  Sun,
-  Moon,
   Lock,
   Unlock,
   Building,
@@ -33,7 +31,7 @@ import {
   Info,
   FileText,
 } from 'lucide-react';
-import { ProductItem, CustomerUser, CurrencyRates, MiniAppNotification, CustomerInquiry } from '../types';
+import { ProductItem, CustomerUser, CurrencyRates, MiniAppNotification, CustomerInquiry, MiniAppUi, DEFAULT_MINIAPP_UI } from '../types';
 import { NfsLogo } from './NfsLogo';
 import { deduplicateProducts } from '../utils/catalogUtils';
 
@@ -51,6 +49,7 @@ interface TelegramMiniAppPreviewProps {
   onCustomerSendMessage?: (inquiryId: string, text: string) => void;
   isStandalone?: boolean;
   onSwitchToAdmin?: () => void;
+  ui?: MiniAppUi | null;
 }
 
 export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
@@ -67,9 +66,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   onCustomerSendMessage,
   isStandalone = false,
   onSwitchToAdmin,
+  ui = null,
 }) => {
   const [activeCategory, setActiveCategory] = useState('همه');
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const isDarkMode = true;
   const [isMiniAppDrawerOpen, setIsMiniAppDrawerOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [selectedInquiryDetail, setSelectedInquiryDetail] = useState<CustomerInquiry | null>(null);
@@ -202,26 +202,46 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
     setTimeout(() => setInquirySuccess(false), 3500);
   };
 
+  const t = ui ?? DEFAULT_MINIAPP_UI;
+  const themeVars = {
+    '--mx-page': t.pageBg,
+    '--mx-card': t.cardBg,
+    '--mx-border': t.cardBorder,
+    '--mx-text': t.textColor,
+    '--mx-muted': t.mutedColor,
+    '--mx-body': t.roles.body.color,
+    '--mx-price': t.roles.price.color,
+    '--mx-accent': t.accent,
+    '--mx-btn': t.buttonBg,
+    '--mx-btn-text': t.buttonText,
+    '--mx-ok': t.accent,
+    '--mx-radius': `${t.radius}px`,
+    fontFamily: t.fontFamily === 'Vazirmatn' ? "'Vazirmatn', system-ui, sans-serif" : t.fontFamily,
+    color: t.textColor,
+    background: t.pageBg,
+  } as React.CSSProperties;
+
   const renderScreenContent = () => (
     <div
       data-phone-dark={isDarkMode ? 'true' : 'false'}
+      style={themeVars}
       className={`w-full ${
         isStandalone ? 'min-h-screen max-w-lg mx-auto shadow-2xl' : 'h-[760px] rounded-[34px]'
       } overflow-hidden flex flex-col relative transition-colors duration-200 select-none ${
-        isDarkMode ? 'bg-[#17212b] text-white' : 'bg-[#ffffff] text-[#0f172a]'
+        isDarkMode ? 'bg-[var(--mx-page)] text-[color:var(--mx-text)]' : 'bg-[#ffffff] text-[#0f172a]'
       }`}
     >
             {/* Telegram Header Bar */}
             <div
               className={`px-3.5 pt-8 pb-3 border-b flex items-center justify-between z-20 ${
-                isDarkMode ? 'bg-[#17212b] border-[#232e3c]' : 'bg-[#0F172A] text-white border-slate-800'
+                isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border-[color:var(--mx-border)]'
               }`}
             >
               {miniAppView === 'detail' ? (
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setMiniAppView('catalog')}
-                    className="flex items-center gap-1 text-xs font-bold text-sky-400 hover:text-sky-300 transition cursor-pointer bg-white/10 px-2 py-1 rounded-lg"
+                    className="flex items-center gap-1 text-xs font-bold text-[color:var(--mx-accent)] hover:opacity-80 transition cursor-pointer bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)] px-2 py-1 rounded-[calc(var(--mx-radius)*0.55)]"
                     title="بازگشت به کاتالوگ"
                   >
                     <ChevronRight className="w-3.5 h-3.5" />
@@ -237,7 +257,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   {/* Mobile Drawer Trigger for Mini App */}
                   <button
                     onClick={() => setIsMiniAppDrawerOpen(true)}
-                    className="p-1.5 rounded-lg bg-black/30 hover:bg-black/50 text-[#FF4D6D] border border-white/10 transition cursor-pointer"
+                    className="p-1.5 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_14%,transparent)] text-[color:var(--mx-accent)] border border-[color:var(--mx-border)] transition cursor-pointer"
                     title="باز کردن منوی کشویی مینی‌آپ"
                   >
                     <Menu className="w-4 h-4" />
@@ -245,7 +265,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
                   <div className="text-right">
                     <div className="text-xs font-bold flex items-center gap-1">
-                      <span className="text-[#FF4D6D] font-mono font-black">NFS</span>
+                      <span className="text-[color:var(--mx-accent)] font-mono font-black">NFS</span>
                       <span>کاتالوگ نفیس تجارت هوشمند</span>
                     </div>
                     <div className="text-[10px] opacity-75">nfs.nafisstore.com</div>
@@ -257,31 +277,23 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 {/* Notification Bell with Badge */}
                 <button
                   onClick={() => setIsNotificationsModalOpen(true)}
-                  className="relative p-1.5 rounded-lg bg-black/20 hover:bg-black/40 text-slate-300 hover:text-white transition cursor-pointer"
+                  className="relative p-1.5 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] text-[color:var(--mx-body)] hover:text-[color:var(--mx-text)] transition cursor-pointer"
                   title="اعلان‌ها و پاسخ‌های ادمین"
                 >
                   <Bell className="w-4 h-4" />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[#E63946] text-white text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold font-mono animate-pulse shadow-sm shadow-[#E63946]/50">
+                    <span className="absolute -top-1 -right-1 bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-bold font-mono animate-pulse shadow-sm shadow-[var(--mx-accent)]/50">
                       {unreadCount}
                     </span>
                   )}
                 </button>
 
-                <button
-                  onClick={() => setIsDarkMode(!isDarkMode)}
-                  className="p-1.5 rounded-lg bg-black/20 hover:bg-black/40 transition cursor-pointer"
-                  title="تغییر تم تلگرام"
-                >
-                  {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-300" /> : <Moon className="w-3.5 h-3.5 text-white" />}
-                </button>
-
                 {previewAsApproved ? (
-                  <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[9px] bg-[color-mix(in_srgb,var(--mx-ok)_20%,transparent)] text-[color:var(--mx-ok)] border border-[color:color-mix(in_srgb,var(--mx-ok)_30%,transparent)] px-2 py-0.5 rounded-full font-bold">
                     همکار تایید شده
                   </span>
                 ) : (
-                  <span className="text-[9px] bg-[#E63946]/20 text-[#FF4D6D] border border-[#E63946]/30 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
+                  <span className="text-[9px] bg-[var(--mx-accent)]/20 text-[color:var(--mx-accent)] border border-[color:var(--mx-accent)]/30 px-1.5 py-0.5 rounded-full font-bold flex items-center gap-0.5">
                     <Lock className="w-2.5 h-2.5" />
                     احراز نشده
                   </span>
@@ -299,24 +311,24 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   if (onMarkNotificationRead) onMarkNotificationRead(activePushToast.id);
                   setActivePushToast(null);
                 }}
-                className="absolute top-16 left-3 right-3 z-45 bg-[#0F172A]/95 border-2 border-[#E63946] text-white p-3 rounded-2xl shadow-2xl backdrop-blur-md cursor-pointer animate-bounce flex items-start gap-2.5"
+                className="absolute top-16 left-3 right-3 z-45 bg-[var(--mx-card)] border-2 border-[color:var(--mx-accent)] text-[color:var(--mx-text)] p-3 rounded-[var(--mx-radius)] shadow-2xl backdrop-blur-md cursor-pointer animate-bounce flex items-start gap-2.5"
               >
-                <div className="w-8 h-8 rounded-xl bg-[#E63946] text-white flex items-center justify-center shrink-0 shadow-md shadow-red-500/30">
+                <div className="w-8 h-8 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] flex items-center justify-center shrink-0 shadow-md shadow-black/30">
                   <BellRing className="w-4 h-4 animate-pulse" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-[11px] text-[#FF4D6D]">
+                    <span className="font-extrabold text-[11px] text-[color:var(--mx-accent)]">
                       {activePushToast.title}
                     </span>
-                    <span className="text-[9px] text-slate-400 font-mono">
+                    <span className="text-[9px] text-[color:var(--mx-muted)] font-mono">
                       {activePushToast.timestamp}
                     </span>
                   </div>
-                  <p className="text-[10px] text-slate-200 line-clamp-2 mt-0.5 leading-snug">
+                  <p className="text-[10px] text-[color:var(--mx-body)] line-clamp-2 mt-0.5 leading-snug">
                     {activePushToast.message}
                   </p>
-                  <div className="text-[9px] text-amber-400 font-bold mt-1 flex items-center gap-1">
+                  <div className="text-[9px] text-[color:var(--mx-price)] font-bold mt-1 flex items-center gap-1">
                     <span>مشاهده پیش‌فاکتور و گفتگو</span>
                     <ChevronLeft className="w-3 h-3" />
                   </div>
@@ -326,7 +338,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     e.stopPropagation();
                     setActivePushToast(null);
                   }}
-                  className="p-1 text-slate-400 hover:text-white"
+                  className="p-1 text-[color:var(--mx-muted)] hover:text-[color:var(--mx-text)]"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -338,13 +350,13 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end">
                 <div
                   className={`w-full max-h-[85%] rounded-t-3xl border-t flex flex-col shadow-2xl overflow-hidden ${
-                    isDarkMode ? 'bg-[#17212b] border-[#2c3a4b] text-white' : 'bg-[#0F172A] border-slate-800 text-white'
+                    isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)] text-[color:var(--mx-text)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)] text-[color:var(--mx-text)]'
                   }`}
                 >
                   {/* Modal Header */}
-                  <div className="p-3.5 border-b border-white/10 flex items-center justify-between">
+                  <div className="p-3.5 border-b border-[color:var(--mx-border)] flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-lg bg-[#E63946]/20 text-[#FF4D6D] flex items-center justify-center">
+                      <div className="w-7 h-7 rounded-[calc(var(--mx-radius)*0.55)] bg-[var(--mx-accent)]/20 text-[color:var(--mx-accent)] flex items-center justify-center">
                         <Bell className="w-4 h-4" />
                       </div>
                       <h4 className="font-bold text-xs">
@@ -356,7 +368,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       {selectedInquiryDetail && (
                         <button
                           onClick={() => setSelectedInquiryDetail(null)}
-                          className="text-[10px] text-sky-400 hover:underline px-2 py-1"
+                          className="text-[10px] text-[color:var(--mx-accent)] hover:underline px-2 py-1"
                         >
                           بازگشت به لیست
                         </button>
@@ -366,7 +378,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           setIsNotificationsModalOpen(false);
                           setSelectedInquiryDetail(null);
                         }}
-                        className="p-1 rounded-lg hover:bg-white/10"
+                        className="p-1 rounded-[calc(var(--mx-radius)*0.55)] hover:bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)]"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -378,25 +390,25 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     {selectedInquiryDetail ? (
                       // Single Inquiry Conversation & Quotation View
                       <div className="space-y-3">
-                        <div className="p-3 rounded-2xl bg-black/25 border border-white/10 space-y-2">
+                        <div className="p-3 rounded-[var(--mx-radius)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] space-y-2">
                           <div className="flex items-center gap-2.5">
                             <img
                               src={selectedInquiryDetail.productImage}
                               alt={selectedInquiryDetail.productTitle}
-                              className="w-12 h-12 rounded-xl object-cover"
+                              className="w-12 h-12 rounded-[calc(var(--mx-radius)*0.75)] object-cover"
                             />
                             <div className="flex-1 min-w-0">
-                              <h5 className="font-bold text-xs truncate text-white">{selectedInquiryDetail.productTitle}</h5>
-                              <div className="text-[10px] text-slate-400">تیراژ درخواستی: {selectedInquiryDetail.requestedQuantity} عدد</div>
-                              <div className="text-[11px] font-bold text-emerald-400 font-mono">
+                              <h5 className="font-bold text-xs truncate text-[color:var(--mx-text)]">{selectedInquiryDetail.productTitle}</h5>
+                              <div className="text-[10px] text-[color:var(--mx-muted)]">تیراژ درخواستی: {selectedInquiryDetail.requestedQuantity} عدد</div>
+                              <div className="text-[11px] font-bold text-[color:var(--mx-ok)] font-mono">
                                 مبلغ کل: {selectedInquiryDetail.totalPriceToman.toLocaleString('en-US')} تومان
                               </div>
                             </div>
                           </div>
 
-                          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px]">
-                            <span className="text-slate-400">وضعیت پیش‌فاکتور:</span>
-                            <span className="font-bold text-amber-300">
+                          <div className="pt-2 border-t border-[color:var(--mx-border)] flex items-center justify-between text-[10px]">
+                            <span className="text-[color:var(--mx-muted)]">وضعیت پیش‌فاکتور:</span>
+                            <span className="font-bold text-[color:var(--mx-price)]">
                               {selectedInquiryDetail.status === 'quoted'
                                 ? 'پیش‌فاکتور صادر شد'
                                 : selectedInquiryDetail.status === 'approved_by_client'
@@ -411,10 +423,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           {selectedInquiryDetail.messages.map((m) => (
                             <div
                               key={m.id}
-                              className={`p-3 rounded-2xl text-xs max-w-[85%] leading-relaxed shadow-sm ${
+                              className={`p-3 rounded-[var(--mx-radius)] text-xs max-w-[85%] leading-relaxed shadow-sm ${
                                 m.sender === 'admin'
-                                  ? 'bg-rose-600 text-white mr-auto'
-                                  : 'bg-slate-800 text-white border border-slate-700 ml-auto'
+                                  ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] mr-auto'
+                                  : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border border-[color:var(--mx-border)] ml-auto'
                               }`}
                             >
                               <div className="font-bold text-[10px] opacity-75 mb-0.5">{m.senderName}:</div>
@@ -437,7 +449,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                                 setCustomerChatReplyText('');
                               }
                             }}
-                            className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-[#E63946]"
+                            className="flex-1 bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] border border-[color:var(--mx-border)] rounded-[calc(var(--mx-radius)*0.75)] px-3 py-2 text-xs text-[color:var(--mx-text)] focus:outline-none focus:border-[color:var(--mx-accent)]"
                           />
                           <button
                             onClick={() => {
@@ -446,7 +458,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                                 setCustomerChatReplyText('');
                               }
                             }}
-                            className="p-2 bg-[#E63946] text-white rounded-xl"
+                            className="p-2 bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] rounded-[calc(var(--mx-radius)*0.75)]"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
@@ -459,7 +471,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               onApproveQuote(selectedInquiryDetail.id);
                               setSelectedInquiryDetail({ ...selectedInquiryDetail, status: 'approved_by_client' });
                             }}
-                            className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/30 transition cursor-pointer"
+                            className="w-full py-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-btn)] hover:brightness-110 text-[color:var(--mx-text)] font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-black/30 transition cursor-pointer"
                           >
                             <CheckCircle2 className="w-4 h-4" />
                             <span>تایید نهایی پیش‌فاکتور و ارجاع به مرحله تامین</span>
@@ -470,7 +482,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       // Notifications List
                       <div className="space-y-2">
                         {notifications.length === 0 ? (
-                          <div className="text-center py-8 text-slate-400 space-y-1">
+                          <div className="text-center py-8 text-[color:var(--mx-muted)] space-y-1">
                             <Bell className="w-8 h-8 mx-auto opacity-30" />
                             <p className="text-xs">هیچ اعلان یا پاسخی ثبت نشده است.</p>
                           </div>
@@ -483,22 +495,22 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                                 const inq = inquiries.find((i) => i.id === notif.inquiryId);
                                 if (inq) setSelectedInquiryDetail(inq);
                               }}
-                              className={`p-3 rounded-2xl border transition cursor-pointer flex items-start gap-2.5 ${
+                              className={`p-3 rounded-[var(--mx-radius)] border transition cursor-pointer flex items-start gap-2.5 ${
                                 notif.read
-                                  ? 'bg-black/15 border-white/5 opacity-75'
-                                  : 'bg-[#E63946]/10 border-[#E63946]/40 text-white'
+                                  ? 'bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)] border-[color:var(--mx-border)] opacity-75'
+                                  : 'bg-[var(--mx-accent)]/10 border-[color:var(--mx-accent)]/40 text-[color:var(--mx-text)]'
                               }`}
                             >
-                              <div className="w-7 h-7 rounded-xl bg-[#E63946]/20 text-[#FF4D6D] flex items-center justify-center shrink-0">
+                              <div className="w-7 h-7 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-accent)]/20 text-[color:var(--mx-accent)] flex items-center justify-center shrink-0">
                                 <Bell className="w-3.5 h-3.5" />
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center justify-between">
                                   <span className="font-bold text-xs">{notif.title}</span>
-                                  <span className="text-[10px] text-slate-400 font-mono">{notif.timestamp}</span>
+                                  <span className="text-[10px] text-[color:var(--mx-muted)] font-mono">{notif.timestamp}</span>
                                 </div>
-                                <p className="text-[11px] text-slate-300 line-clamp-2 mt-0.5">{notif.message}</p>
-                                <span className="text-[10px] text-sky-400 font-semibold mt-1 inline-block">
+                                <p className="text-[11px] text-[color:var(--mx-body)] line-clamp-2 mt-0.5">{notif.message}</p>
+                                <span className="text-[10px] text-[color:var(--mx-accent)] font-semibold mt-1 inline-block">
                                   مشاهده گفتگو و پیش‌فاکتور ←
                                 </span>
                               </div>
@@ -524,18 +536,18 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             {/* Drawer Container (Sliding from Right in RTL) */}
             <aside
               className={`absolute top-0 bottom-0 right-0 z-50 w-72 max-w-[85%] ${
-                isDarkMode ? 'bg-[#17212b] text-white border-l border-[#232e3c]' : 'bg-[#0F172A] text-white border-l border-slate-800'
+                isDarkMode ? 'bg-[var(--mx-page)] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]'
               } shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out transform ${
                 isMiniAppDrawerOpen ? 'translate-x-0' : 'translate-x-full'
               }`}
             >
               {/* Drawer Header */}
-              <div className="p-4 border-b border-white/10 flex items-center justify-between">
+              <div className="p-4 border-b border-[color:var(--mx-border)] flex items-center justify-between">
                 <NfsLogo size="sm" />
 
                 <button
                   onClick={() => setIsMiniAppDrawerOpen(false)}
-                  className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition cursor-pointer"
+                  className="p-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] text-[color:var(--mx-body)] hover:text-[color:var(--mx-text)] transition cursor-pointer"
                 >
                   <X className="w-4 h-4" />
                 </button>
@@ -544,21 +556,21 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               {/* Drawer Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 no-scrollbar text-xs">
                 {/* Customer Account Summary Card */}
-                <div className="p-3 rounded-2xl bg-black/30 border border-white/10 space-y-1.5">
+                <div className="p-3 rounded-[var(--mx-radius)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-slate-400">حساب کاربری همکار:</span>
+                    <span className="text-[10px] text-[color:var(--mx-muted)]">حساب کاربری همکار:</span>
                     <span
                       className={`text-[9px] px-2 py-0.5 rounded-full font-bold ${
-                        previewAsApproved ? 'bg-emerald-500/20 text-emerald-400' : 'bg-[#E63946]/20 text-[#FF4D6D]'
+                        previewAsApproved ? 'bg-[color-mix(in_srgb,var(--mx-ok)_20%,transparent)] text-[color:var(--mx-ok)]' : 'bg-[var(--mx-accent)]/20 text-[color:var(--mx-accent)]'
                       }`}
                     >
                       {previewAsApproved ? 'تایید شده (قیمت فعال)' : 'در انتظار تایید (قیمت قفل)'}
                     </span>
                   </div>
-                  <div className="font-bold text-white text-xs">{currentCustomer?.name || 'کاربر همکار'}</div>
-                  <div className="text-[10px] text-slate-400 flex items-center justify-between pt-0.5">
+                  <div className="font-bold text-[color:var(--mx-text)] text-xs">{currentCustomer?.name || 'کاربر همکار'}</div>
+                  <div className="text-[10px] text-[color:var(--mx-muted)] flex items-center justify-between pt-0.5">
                     <span>سطح: {currentCustomer?.tier || 'همکار برنزی'}</span>
-                    <span className="font-mono text-sky-400">@{currentCustomer?.telegramUsername || 'nafis'}</span>
+                    <span className="font-mono text-[color:var(--mx-accent)]">@{currentCustomer?.telegramUsername || 'nafis'}</span>
                   </div>
                 </div>
 
@@ -575,13 +587,13 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         setAdminPinError('');
                       }
                     }}
-                    className="w-full flex items-center justify-between p-2.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 text-amber-300 font-bold text-xs transition cursor-pointer"
+                    className="w-full flex items-center justify-between p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[color-mix(in_srgb,var(--mx-price)_15%,transparent)] hover:brightness-110 border border-[color:color-mix(in_srgb,var(--mx-price)_40%,transparent)] text-[color:var(--mx-price)] font-bold text-xs transition cursor-pointer"
                   >
                     <div className="flex items-center gap-2">
-                      <Lock className="w-4 h-4 text-amber-400" />
+                      <Lock className="w-4 h-4 text-[color:var(--mx-price)]" />
                       <span>ورود به پنل مدیریت بازرگانی</span>
                     </div>
-                    <span className="text-[10px] bg-amber-400/20 text-amber-300 px-1.5 py-0.5 rounded font-mono">رمزدار</span>
+                    <span className="text-[10px] bg-[color-mix(in_srgb,var(--mx-price)_20%,transparent)] text-[color:var(--mx-price)] px-1.5 py-0.5 rounded font-mono">رمزدار</span>
                   </button>
                 )}
 
@@ -591,18 +603,18 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     setIsMiniAppDrawerOpen(false);
                     setIsNotificationsModalOpen(true);
                   }}
-                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-bold text-xs transition cursor-pointer shadow-sm"
+                  className="w-full flex items-center justify-between p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-card)] hover:brightness-110 border border-[color:var(--mx-border)] text-[color:var(--mx-text)] font-bold text-xs transition cursor-pointer shadow-sm"
                 >
                   <div className="flex items-center gap-2">
-                    <BellRing className="w-4 h-4 text-rose-400" />
+                    <BellRing className="w-4 h-4 text-[color:var(--mx-accent)]" />
                     <span>مرکز اعلان‌ها و استعلام‌های من</span>
                   </div>
                   {unreadCount > 0 ? (
-                    <span className="bg-rose-600 text-white text-[10px] px-2 py-0.5 rounded-full font-bold font-mono animate-pulse">
+                    <span className="bg-[var(--mx-btn)] text-[color:var(--mx-text)] text-[10px] px-2 py-0.5 rounded-full font-bold font-mono animate-pulse">
                       {unreadCount} جدید
                     </span>
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-normal">مشاهده</span>
+                    <span className="text-[10px] text-[color:var(--mx-muted)] font-normal">مشاهده</span>
                   )}
                 </button>
 
@@ -611,38 +623,38 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     onClick={() => {
                       Notification.requestPermission();
                     }}
-                    className="w-full flex items-center justify-center gap-1.5 p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] border border-slate-700 transition cursor-pointer"
+                    className="w-full flex items-center justify-center gap-1.5 p-2 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-card)] hover:brightness-110 text-[color:var(--mx-body)] text-[10px] border border-[color:var(--mx-border)] transition cursor-pointer"
                   >
-                    <Bell className="w-3.5 h-3.5 text-amber-400" />
+                    <Bell className="w-3.5 h-3.5 text-[color:var(--mx-price)]" />
                     <span>فعال‌سازی پوش‌نوتیفیکیشن مرورگر</span>
                   </button>
                 )}
 
                 {/* Currency Switcher in Drawer */}
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-300 block">واحد پول نمایشی قیمت‌ها:</label>
-                  <div className="grid grid-cols-4 gap-1 p-1 bg-black/30 rounded-xl border border-white/10 text-center font-mono text-[10px]">
+                  <label className="text-[10px] font-bold text-[color:var(--mx-body)] block">واحد پول نمایشی قیمت‌ها:</label>
+                  <div className="grid grid-cols-4 gap-1 p-1 bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] rounded-[calc(var(--mx-radius)*0.75)] border border-[color:var(--mx-border)] text-center font-mono text-[10px]">
                     <button
                       onClick={() => setDisplayCurrency('TOMAN')}
-                      className={`py-1 rounded-lg transition font-sans cursor-pointer ${displayCurrency === 'TOMAN' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400'}`}
+                      className={`py-1 rounded-[calc(var(--mx-radius)*0.55)] transition font-sans cursor-pointer ${displayCurrency === 'TOMAN' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] font-bold' : 'text-[color:var(--mx-muted)]'}`}
                     >
                       تومان
                     </button>
                     <button
                       onClick={() => setDisplayCurrency('USD')}
-                      className={`py-1 rounded-lg transition cursor-pointer ${displayCurrency === 'USD' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400'}`}
+                      className={`py-1 rounded-[calc(var(--mx-radius)*0.55)] transition cursor-pointer ${displayCurrency === 'USD' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] font-bold' : 'text-[color:var(--mx-muted)]'}`}
                     >
                       $ USD
                     </button>
                     <button
                       onClick={() => setDisplayCurrency('CNY')}
-                      className={`py-1 rounded-lg transition cursor-pointer ${displayCurrency === 'CNY' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400'}`}
+                      className={`py-1 rounded-[calc(var(--mx-radius)*0.55)] transition cursor-pointer ${displayCurrency === 'CNY' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] font-bold' : 'text-[color:var(--mx-muted)]'}`}
                     >
                       ¥ CNY
                     </button>
                     <button
                       onClick={() => setDisplayCurrency('AED')}
-                      className={`py-1 rounded-lg transition cursor-pointer ${displayCurrency === 'AED' ? 'bg-rose-600 text-white font-bold' : 'text-slate-400'}`}
+                      className={`py-1 rounded-[calc(var(--mx-radius)*0.55)] transition cursor-pointer ${displayCurrency === 'AED' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] font-bold' : 'text-[color:var(--mx-muted)]'}`}
                     >
                       AED
                     </button>
@@ -651,7 +663,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
                 {/* Categories Navigation in Drawer */}
                 <div className="space-y-1">
-                  <div className="text-[10px] font-bold text-slate-400 px-1 pb-1">دسته‌بندی‌های کالای عمده:</div>
+                  <div className="text-[10px] font-bold text-[color:var(--mx-muted)] px-1 pb-1">دسته‌بندی‌های کالای عمده:</div>
                   {categories.map((cat) => {
                     const isCatActive = activeCategory === cat;
                     const catCount = cat === 'همه' ? cleanProducts.length : cleanProducts.filter((p) => p.category === cat).length;
@@ -662,19 +674,19 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           setActiveCategory(cat);
                           setIsMiniAppDrawerOpen(false);
                         }}
-                        className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-semibold transition cursor-pointer ${
+                        className={`w-full flex items-center justify-between p-2.5 rounded-[calc(var(--mx-radius)*0.75)] text-xs font-semibold transition cursor-pointer ${
                           isCatActive
-                            ? 'bg-rose-600 text-white border border-rose-500 font-bold shadow-md shadow-rose-900/30'
-                            : 'text-slate-300 hover:bg-white/5'
+                            ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] border border-[color:var(--mx-accent)] font-bold shadow-md shadow-black/30'
+                            : 'text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <Package className={`w-3.5 h-3.5 ${isCatActive ? 'text-white' : 'text-rose-400'}`} />
+                          <Package className={`w-3.5 h-3.5 ${isCatActive ? 'text-[color:var(--mx-text)]' : 'text-[color:var(--mx-accent)]'}`} />
                           <span>{cat}</span>
                         </div>
                         <div className="flex items-center gap-1.5">
-                          <span className={`text-[10px] font-mono ${isCatActive ? 'text-white font-bold' : 'opacity-60'}`}>({catCount})</span>
-                          <ChevronLeft className={`w-3.5 h-3.5 ${isCatActive ? 'text-white' : 'text-slate-500'}`} />
+                          <span className={`text-[10px] font-mono ${isCatActive ? 'text-[color:var(--mx-text)] font-bold' : 'opacity-60'}`}>({catCount})</span>
+                          <ChevronLeft className={`w-3.5 h-3.5 ${isCatActive ? 'text-[color:var(--mx-text)]' : 'text-[color:var(--mx-muted)]'}`} />
                         </div>
                       </button>
                     );
@@ -682,58 +694,58 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 </div>
 
                 {/* External links */}
-                <div className="pt-2 border-t border-white/10 space-y-1.5">
+                <div className="pt-2 border-t border-[color:var(--mx-border)] space-y-1.5">
                   <a
                     href="https://t.me/NafisSmartTrade"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-between p-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 transition"
+                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)] transition"
                   >
                     <div className="flex items-center gap-2">
-                      <Send className="w-3.5 h-3.5 text-sky-400" />
+                      <Send className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
                       <span>کانال رسمی تلگرام (@NafisSmartTrade)</span>
                     </div>
-                    <ExternalLink className="w-3 h-3 text-slate-500" />
+                    <ExternalLink className="w-3 h-3 text-[color:var(--mx-muted)]" />
                   </a>
 
                   <a
                     href="https://t.me/nafistejarat_bot"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-between p-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 transition"
+                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)] transition"
                   >
                     <div className="flex items-center gap-2">
-                      <Bot className="w-3.5 h-3.5 text-[#FF4D6D]" />
+                      <Bot className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
                       <span>ربات هوشمند استعلام (@nafistejarat_bot)</span>
                     </div>
-                    <ExternalLink className="w-3 h-3 text-slate-500" />
+                    <ExternalLink className="w-3 h-3 text-[color:var(--mx-muted)]" />
                   </a>
 
                   <a
                     href="https://nafisstore.com"
                     target="_blank"
                     rel="noreferrer"
-                    className="w-full flex items-center justify-between p-2 rounded-xl text-xs text-slate-300 hover:bg-white/5 transition"
+                    className="w-full flex items-center justify-between p-2 rounded-[calc(var(--mx-radius)*0.75)] text-xs text-[color:var(--mx-body)] hover:bg-[color-mix(in_srgb,var(--mx-text)_6%,transparent)] transition"
                   >
                     <div className="flex items-center gap-2">
-                      <Globe className="w-3.5 h-3.5 text-emerald-400" />
+                      <Globe className="w-3.5 h-3.5 text-[color:var(--mx-ok)]" />
                       <span>وب‌سایت نفیس‌استور (nafisstore.com)</span>
                     </div>
-                    <ExternalLink className="w-3 h-3 text-slate-500" />
+                    <ExternalLink className="w-3 h-3 text-[color:var(--mx-muted)]" />
                   </a>
 
-                  <div className="p-2.5 rounded-xl bg-[#E63946]/10 border border-[#E63946]/20 text-[10px] text-slate-300 space-y-1">
-                    <div className="font-bold text-[#FF4D6D] flex items-center gap-1">
+                  <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-accent)]/10 border border-[color:var(--mx-accent)]/20 text-[10px] text-[color:var(--mx-body)] space-y-1">
+                    <div className="font-bold text-[color:var(--mx-accent)] flex items-center gap-1">
                       <MessageSquare className="w-3 h-3" />
                       <span>پشتیبانی سفارشات شرکت:</span>
                     </div>
-                    <p className="text-slate-400">شرکت نفیس تجارت هوشمند (NFS) • تامین کانتینری و حواله ارزی مستقیم</p>
+                    <p className="text-[color:var(--mx-muted)]">شرکت نفیس تجارت هوشمند (NFS) • تامین کانتینری و حواله ارزی مستقیم</p>
                   </div>
                 </div>
               </div>
 
               {/* Drawer Footer */}
-              <div className="p-3 border-t border-white/10 text-center text-[10px] text-slate-400">
+              <div className="p-3 border-t border-[color:var(--mx-border)] text-center text-[10px] text-[color:var(--mx-muted)]">
                 <span>NFS Telegram MiniApp v2.4</span>
               </div>
             </aside>
@@ -745,16 +757,16 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 <div className="space-y-3 pb-2 animate-fadeIn">
                   {/* Large Image Gallery & Switcher */}
                   <div className="space-y-2">
-                    <div className="relative aspect-square w-full rounded-2xl overflow-hidden bg-slate-900 border border-white/10 shadow-md">
+                    <div className="relative aspect-square w-full rounded-[var(--mx-radius)] overflow-hidden bg-[var(--mx-card)] border border-[color:var(--mx-border)] shadow-md">
                       <img
                         src={selectedGalleryImage || currentProduct.mainImage}
                         alt={currentProduct.faTitle}
                         className="w-full h-full object-cover transition duration-300"
                       />
-                      <div className="absolute top-2 right-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-lg text-[10px] text-amber-300 font-bold font-mono border border-amber-500/30">
+                      <div className="absolute top-2 right-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-[calc(var(--mx-radius)*0.55)] text-[10px] text-[color:var(--mx-price)] font-bold font-mono border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)]">
                         ترند {currentProduct.trendScore}%
                       </div>
-                      <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-lg text-[9px] text-slate-300">
+                      <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-[calc(var(--mx-radius)*0.55)] text-[9px] text-[color:var(--mx-body)]">
                         حداقل سفارش: {currentProduct.moq} عدد
                       </div>
                     </div>
@@ -766,10 +778,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           <button
                             key={i}
                             onClick={() => setSelectedGalleryImage(imgUrl)}
-                            className={`w-12 h-12 rounded-xl overflow-hidden shrink-0 border-2 transition cursor-pointer ${
+                            className={`w-12 h-12 rounded-[calc(var(--mx-radius)*0.75)] overflow-hidden shrink-0 border-2 transition cursor-pointer ${
                               (selectedGalleryImage || currentProduct.mainImage) === imgUrl
-                                ? 'border-[#E63946] scale-105'
-                                : 'border-white/10 opacity-70 hover:opacity-100'
+                                ? 'border-[color:var(--mx-accent)] scale-105'
+                                : 'border-[color:var(--mx-border)] opacity-70 hover:opacity-100'
                             }`}
                           >
                             <img src={imgUrl} alt="" className="w-full h-full object-cover" />
@@ -782,21 +794,21 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   {/* Product Titles & Sourcing Badges */}
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-accent)_20%,transparent)] text-[color:var(--mx-accent)] border border-[color:color-mix(in_srgb,var(--mx-accent)_30%,transparent)]">
                         {currentProduct.category}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-300 border border-amber-500/30 font-mono">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-price)_20%,transparent)] text-[color:var(--mx-price)] border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)] font-mono">
                         {currentProduct.supplier.platform}
                       </span>
                       {currentProduct.supplier.hasTradeAssurance && (
-                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-ok)_20%,transparent)] text-[color:var(--mx-ok)] border border-[color:color-mix(in_srgb,var(--mx-ok)_30%,transparent)] flex items-center gap-1">
                           <ShieldCheck className="w-3 h-3" />
                           ضمانت تجاری
                         </span>
                       )}
                     </div>
 
-                    <h3 className="text-sm font-extrabold leading-snug">
+                    <h3 className="text-sm font-extrabold leading-snug" style={{ fontSize: t.roles.heading.size, fontWeight: t.roles.heading.weight, color: t.roles.heading.color, lineHeight: t.roles.heading.lineHeight }}>
                       {currentProduct.faTitle}
                     </h3>
 
@@ -807,32 +819,32 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
                   {/* Wholesale Tiered Pricing Card */}
                   <div
-                    className={`rounded-2xl p-3 border space-y-2.5 ${
-                      isDarkMode ? 'bg-[#202b36] border-[#2c3a4b]' : 'bg-slate-50 border-slate-200'
+                    className={`rounded-[var(--mx-radius)] p-3 border space-y-2.5 ${
+                      isDarkMode ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'
                     }`}
                   >
-                    <div className="flex items-center justify-between pb-1 border-b border-white/10">
-                      <span className="text-[11px] font-bold flex items-center gap-1 text-emerald-400">
+                    <div className="flex items-center justify-between pb-1 border-b border-[color:var(--mx-border)]">
+                      <span className="text-[11px] font-bold flex items-center gap-1 text-[color:var(--mx-ok)]">
                         <Layers className="w-3.5 h-3.5" />
                         جدول قیمت‌های پلکانی عمده
                       </span>
                       {/* Currency Switcher */}
-                      <div className="flex items-center gap-1 text-[9px] bg-black/30 p-0.5 rounded-lg border border-white/10">
+                      <div className="flex items-center gap-1 text-[9px] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] p-0.5 rounded-[calc(var(--mx-radius)*0.55)] border border-[color:var(--mx-border)]">
                         <button
                           onClick={() => setDisplayCurrency('TOMAN')}
-                          className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[#5288c1] text-white font-bold' : 'opacity-70'}`}
+                          className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                         >
                           تومان
                         </button>
                         <button
                           onClick={() => setDisplayCurrency('USD')}
-                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[#5288c1] text-white font-bold' : 'opacity-70'}`}
+                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                         >
                           $
                         </button>
                         <button
                           onClick={() => setDisplayCurrency('CNY')}
-                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[#5288c1] text-white font-bold' : 'opacity-70'}`}
+                          className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                         >
                           ¥
                         </button>
@@ -844,16 +856,16 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         {currentProduct.tieredPricing.map((tier, idx) => (
                           <div
                             key={idx}
-                            className={`p-2 rounded-xl border text-[10px] space-y-0.5 ${
+                            className={`p-2 rounded-[calc(var(--mx-radius)*0.75)] border text-[10px] space-y-0.5 ${
                               orderQuantity >= tier.minQuantity && (!tier.maxQuantity || orderQuantity <= tier.maxQuantity)
-                                ? 'bg-[#5288c1]/20 border-[#5288c1] font-bold text-sky-300'
-                                : 'bg-black/20 border-white/10 opacity-80'
+                                ? 'bg-[var(--mx-btn)]/20 border-[color:var(--mx-btn)] font-bold text-[color:var(--mx-accent)]'
+                                : 'bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border-[color:var(--mx-border)] opacity-80'
                             }`}
                           >
                             <div className="opacity-70 text-[9px]">
                               {tier.maxQuantity ? `${tier.minQuantity}-${tier.maxQuantity} عدد` : `+${tier.minQuantity} عدد`}
                             </div>
-                            <div className="font-extrabold text-[11px] font-mono text-emerald-400">
+                            <div className="font-extrabold text-[11px] font-mono text-[color:var(--mx-ok)]">
                               {displayCurrency === 'TOMAN'
                                 ? `${(tier.calculatedPriceToman || 0).toLocaleString('en-US')}`
                                 : displayCurrency === 'USD'
@@ -864,8 +876,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         ))}
                       </div>
                     ) : (
-                      <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-center space-y-1">
-                        <div className="text-xs font-bold text-amber-300 flex items-center justify-center gap-1">
+                      <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[color-mix(in_srgb,var(--mx-price)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)] text-center space-y-1">
+                        <div className="text-xs font-bold text-[color:var(--mx-price)] flex items-center justify-center gap-1">
                           <Lock className="w-3.5 h-3.5" />
                           <span>قیمت‌های دقیق پلکانی مختص همکاران تایید شده است</span>
                         </div>
@@ -878,28 +890,28 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
                   {/* Interactive Order Quantity Stepper & Calculator */}
                   <div
-                    className={`rounded-2xl p-3 border space-y-2.5 ${
-                      isDarkMode ? 'bg-[#202b36] border-[#2c3a4b]' : 'bg-slate-50 border-slate-200'
+                    className={`rounded-[var(--mx-radius)] p-3 border space-y-2.5 ${
+                      isDarkMode ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-amber-400 flex items-center gap-1">
+                      <span className="text-[11px] font-bold text-[color:var(--mx-price)] flex items-center gap-1">
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>محاسبه‌گر تیراژ سفارش</span>
                       </span>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => setOrderQuantity(Math.max(currentProduct.moq, orderQuantity - 10))}
-                          className="w-6 h-6 rounded-lg bg-black/40 hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
+                          className="w-6 h-6 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
                         >
                           <Minus className="w-3 h-3" />
                         </button>
-                        <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-black/30 text-amber-300">
+                        <span className="font-mono font-bold text-xs px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] text-[color:var(--mx-price)]">
                           {orderQuantity} عدد
                         </span>
                         <button
                           onClick={() => setOrderQuantity(orderQuantity + 10)}
-                          className="w-6 h-6 rounded-lg bg-black/40 hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
+                          className="w-6 h-6 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_12%,transparent)] hover:bg-black/60 flex items-center justify-center text-xs font-bold cursor-pointer"
                         >
                           <Plus className="w-3 h-3" />
                         </button>
@@ -913,15 +925,15 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       step={10}
                       value={orderQuantity}
                       onChange={(e) => setOrderQuantity(Number(e.target.value))}
-                      className="w-full accent-[#5288c1] cursor-pointer"
+                      className="w-full accent-[var(--mx-accent)] cursor-pointer"
                     />
 
                     {/* Live Calculated Price Summary */}
                     {currentPricing && previewAsApproved && (
-                      <div className="p-2.5 rounded-xl bg-black/30 border border-white/10 flex items-center justify-between text-xs">
+                      <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] flex items-center justify-between text-xs">
                         <div>
                           <div className="text-[9px] opacity-70">قیمت واحد در این تیراژ:</div>
-                          <div className="font-bold text-emerald-400 font-mono">
+                          <div className="font-bold text-[color:var(--mx-ok)] font-mono">
                             {displayCurrency === 'TOMAN'
                               ? `${currentPricing.unitToman.toLocaleString('en-US')} تومان`
                               : displayCurrency === 'USD'
@@ -931,7 +943,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         </div>
                         <div className="text-left">
                           <div className="text-[9px] opacity-70">مبلغ کل پیش‌فاکتور:</div>
-                          <div className="font-extrabold text-amber-300 font-mono text-sm">
+                          <div className="font-extrabold text-[color:var(--mx-price)] font-mono text-sm">
                             {(currentPricing.totalToman / 1000000).toFixed(2)} M تومان
                           </div>
                         </div>
@@ -941,7 +953,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     {/* Customer Inquiry Memo / Special Request */}
                     <div className="space-y-1 pt-1">
                       <label className="text-[10px] opacity-80 flex items-center gap-1 font-semibold">
-                        <MessageSquare className="w-3 h-3 text-sky-400" />
+                        <MessageSquare className="w-3 h-3 text-[color:var(--mx-accent)]" />
                         <span>توضیحات و نیازمندی‌های این سفارش (اختیاری):</span>
                       </label>
                       <textarea
@@ -949,7 +961,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         value={customerInquiryNotes}
                         onChange={(e) => setCustomerInquiryNotes(e.target.value)}
                         placeholder="مثال: درخواست رنگ‌بندی خاص، نمونه تستی، ترخیص در گمرک غرب تهران..."
-                        className="w-full bg-black/30 border border-white/15 rounded-xl p-2 text-[11px] focus:outline-none focus:border-sky-400 placeholder:opacity-40 resize-none"
+                        className="w-full bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] rounded-[calc(var(--mx-radius)*0.75)] p-2 text-[11px] focus:outline-none focus:border-[color:var(--mx-accent)] placeholder:opacity-40 resize-none"
                       />
                     </div>
                   </div>
@@ -957,12 +969,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   {/* Technical Specifications Table */}
                   {currentProduct.technicalSpecs && (
                     <div
-                      className={`rounded-2xl p-3 border space-y-2 ${
-                        isDarkMode ? 'bg-[#202b36] border-[#2c3a4b]' : 'bg-slate-50 border-slate-200'
+                      className={`rounded-[var(--mx-radius)] p-3 border space-y-2 ${
+                        isDarkMode ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'
                       }`}
                     >
-                      <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-white/10">
-                        <Info className="w-3.5 h-3.5 text-sky-400" />
+                      <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-[color:var(--mx-border)]">
+                        <Info className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
                         <span>مشخصات فنی و استانداردهای کالا:</span>
                       </div>
                       <div className="divide-y divide-white/5 text-[10px]">
@@ -978,20 +990,20 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
                   {/* Features & Full Description */}
                   <div
-                    className={`rounded-2xl p-3 border space-y-2 ${
-                      isDarkMode ? 'bg-[#202b36] border-[#2c3a4b]' : 'bg-slate-50 border-slate-200'
+                    className={`rounded-[var(--mx-radius)] p-3 border space-y-2 ${
+                      isDarkMode ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'
                     }`}
                   >
-                    <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-white/10">
-                      <FileText className="w-3.5 h-3.5 text-amber-400" />
+                    <div className="text-[11px] font-bold flex items-center gap-1.5 opacity-90 pb-1 border-b border-[color:var(--mx-border)]">
+                      <FileText className="w-3.5 h-3.5 text-[color:var(--mx-price)]" />
                       <span>ویژگی‌های کلیدی و توضیحات جامع:</span>
                     </div>
-                    <ul className="list-disc list-inside space-y-1 text-[10px] opacity-85 leading-relaxed">
+                    <ul className="list-disc list-inside space-y-1.5" style={{ fontSize: t.roles.small.size, fontWeight: t.roles.small.weight, color: t.roles.small.color, lineHeight: t.roles.small.lineHeight }}>
                       {currentProduct.faFeatures.map((f, i) => (
                         <li key={i}>{f}</li>
                       ))}
                     </ul>
-                    <p className="text-[10px] opacity-75 pt-1 border-t border-white/5 leading-relaxed">
+                    <p className="pt-2 border-t border-[color:var(--mx-border)]" style={{ fontSize: t.roles.body.size, fontWeight: t.roles.body.weight, color: t.roles.body.color, lineHeight: t.roles.body.lineHeight, whiteSpace: 'pre-line' }}>
                       {currentProduct.faFullDesc}
                     </p>
                   </div>
@@ -1001,9 +1013,9 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 <div className="space-y-3">
                   {/* Gatekeeping notice if unapproved */}
                   {!previewAsApproved && (
-                    <div className="p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-[10px] text-amber-300 space-y-1">
+                    <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[color-mix(in_srgb,var(--mx-price)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)] text-[10px] text-[color:var(--mx-price)] space-y-1">
                       <div className="font-bold flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-amber-400 shrink-0" />
+                        <Lock className="w-3 h-3 text-[color:var(--mx-price)] shrink-0" />
                         <span>قیمت‌های عمده اختصاصی همکاران تایید شده است</span>
                       </div>
                       <p className="opacity-80 leading-relaxed">
@@ -1017,35 +1029,35 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     <div className="flex items-center justify-between">
                       <div>
                         <h4 className="text-xs font-bold">کالاهای جدید عمده‌فروشی</h4>
-                        <p className={`text-[10px] ${isDarkMode ? 'text-slate-400' : 'text-slate-500'}`}>
+                        <p className={`text-[10px] ${isDarkMode ? 'text-[color:var(--mx-muted)]' : 'text-[color:var(--mx-muted)]'}`}>
                           برای مشاهده مشخصات کامل و ثبت استعلام روی هر کالا بزنید
                         </p>
                       </div>
 
                       {/* Currency Switcher */}
                       {previewAsApproved && (
-                        <div className="flex items-center gap-1 text-[9px] bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/60">
+                        <div className="flex items-center gap-1 text-[9px] bg-[color-mix(in_srgb,var(--mx-card)_80%,transparent)] p-0.5 rounded-[calc(var(--mx-radius)*0.55)] border border-[color:var(--mx-border)]">
                           <button
                             onClick={() => setDisplayCurrency('TOMAN')}
-                            className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[#5288c1] text-white font-bold' : 'opacity-70'}`}
+                            className={`px-1.5 py-0.5 rounded ${displayCurrency === 'TOMAN' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             تومان
                           </button>
                           <button
                             onClick={() => setDisplayCurrency('USD')}
-                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[#5288c1] text-white font-bold' : 'opacity-70'}`}
+                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'USD' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             $
                           </button>
                           <button
                             onClick={() => setDisplayCurrency('CNY')}
-                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[#5288c1] text-white font-bold' : 'opacity-70'}`}
+                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'CNY' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             ¥
                           </button>
                           <button
                             onClick={() => setDisplayCurrency('AED')}
-                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'AED' ? 'bg-[#5288c1] text-white font-bold' : 'opacity-70'}`}
+                            className={`px-1 py-0.5 rounded font-mono ${displayCurrency === 'AED' ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold' : 'opacity-70'}`}
                           >
                             درهم
                           </button>
@@ -1061,10 +1073,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                           onClick={() => setActiveCategory(cat)}
                           className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
                             activeCategory === cat
-                              ? 'bg-[#E63946] text-white font-bold shadow-sm shadow-[#E63946]/30'
+                              ? 'bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] font-bold shadow-sm shadow-[var(--mx-accent)]/30'
                               : isDarkMode
-                              ? 'bg-[#232e3c] text-slate-300'
-                              : 'bg-slate-100 text-slate-700'
+                              ? 'bg-[var(--mx-border)] text-[color:var(--mx-body)]'
+                              : 'bg-[var(--mx-card)] text-[color:var(--mx-muted)]'
                           }`}
                         >
                           {cat}
@@ -1092,20 +1104,20 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             setSelectedGalleryImage(item.mainImage);
                             setMiniAppView('detail');
                           }}
-                          className={`rounded-2xl p-2 cursor-pointer transition flex flex-col justify-between border hover:scale-[1.02] active:scale-95 ${
+                          className={`rounded-[var(--mx-radius)] p-2 cursor-pointer transition flex flex-col justify-between border hover:scale-[1.02] active:scale-95 ${
                             isDarkMode
-                              ? 'bg-[#202b36] border-[#293747] hover:border-[#5288c1]'
-                              : 'bg-slate-50 border-slate-200 hover:border-slate-400'
+                              ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-btn)]'
+                              : 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-accent)]'
                           }`}
                         >
                           <div className="space-y-1.5">
-                            <div className="relative aspect-square rounded-xl overflow-hidden bg-slate-800">
+                            <div className="relative aspect-square rounded-[calc(var(--mx-radius)*0.75)] overflow-hidden bg-[var(--mx-card)]">
                               <img
                                 src={item.mainImage}
                                 alt={item.faTitle}
                                 className="w-full h-full object-cover"
                               />
-                              <div className="absolute top-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] text-amber-300 font-bold font-mono">
+                              <div className="absolute top-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] text-[color:var(--mx-price)] font-bold font-mono">
                                 {item.trendScore}%
                               </div>
                             </div>
@@ -1115,11 +1127,11 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             </h5>
                           </div>
 
-                          <div className="mt-2 pt-1.5 border-t border-slate-700/40 space-y-1.5">
+                          <div className="mt-2 pt-1.5 border-t border-[color:var(--mx-border)] space-y-1.5">
                             <div>
                               <div className="text-[9px] opacity-70">قیمت عمده:</div>
                               {previewAsApproved ? (
-                                <div className="text-[11px] font-bold text-emerald-400 font-mono">
+                                <div className="text-[11px] font-bold text-[color:var(--mx-ok)] font-mono">
                                   {displayCurrency === 'TOMAN'
                                     ? `${lowestToman.toLocaleString('en-US')} ت`
                                     : displayCurrency === 'USD'
@@ -1129,7 +1141,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                                     : `${lowestAed} AED`}
                                 </div>
                               ) : (
-                                <div className="text-[10px] font-bold text-amber-400 flex items-center gap-1">
+                                <div className="text-[10px] font-bold text-[color:var(--mx-price)] flex items-center gap-1">
                                   <Lock className="w-3 h-3" />
                                   <span>مخصوص همکار</span>
                                 </div>
@@ -1137,7 +1149,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               <div className="text-[9px] opacity-60">حداقل: {item.moq} عدد</div>
                             </div>
 
-                            <button className="w-full py-1 rounded-lg bg-[#5288c1]/20 hover:bg-[#5288c1]/30 text-[#5288c1] dark:text-sky-300 text-[10px] font-bold flex items-center justify-center gap-1">
+                            <button className="w-full py-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[var(--mx-btn)]/20 hover:bg-[var(--mx-btn)]/30 text-[color:var(--mx-accent)] dark:text-[color:var(--mx-accent)] text-[10px] font-bold flex items-center justify-center gap-1">
                               <span>مشاهده و استعلام</span>
                               <ChevronLeft className="w-3 h-3" />
                             </button>
@@ -1151,15 +1163,15 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             </div>
 
             {/* Telegram WebApp Fixed MainButton at Bottom */}
-            <div className={`p-3 border-t ${isDarkMode ? 'bg-[#17212b] border-[#232e3c]' : 'bg-white border-slate-200'}`}>
+            <div className={`p-3 border-t ${isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'}`}>
               {miniAppView === 'detail' ? (
                 <button
                   onClick={handleSendInquiry}
-                  className="nfs-btn-primary w-full py-3.5 rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                  className="nfs-btn-primary w-full py-3.5 rounded-[calc(var(--mx-radius)*0.75)] font-bold text-xs shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
                 >
                   {inquirySuccess ? (
                     <>
-                      <Check className="w-4 h-4 text-emerald-300" />
+                      <Check className="w-4 h-4 text-[color:var(--mx-ok)]" />
                       <span>استعلام با موفقیت ثبت شد و به پنل ادمین ارسال گردید!</span>
                     </>
                   ) : (
@@ -1176,7 +1188,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               ) : (
                 <div className="flex items-center justify-between text-xs px-2 py-1 opacity-80">
                   <span className="text-[10px]">روی هر کالا بزنید تا صفحه اختصاصی مشخصات و استعلام باز شود</span>
-                  <span className="font-bold text-[#FF4D6D] flex items-center gap-1 font-mono text-[10px]">
+                  <span className="font-bold text-[color:var(--mx-accent)] flex items-center gap-1 font-mono text-[10px]">
                     {filtered.length} کالا
                   </span>
                 </div>
@@ -1189,23 +1201,23 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
     if (!isAdminPinModalOpen) return null;
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in">
-        <div className="bg-slate-900 border border-amber-500/40 rounded-2xl max-w-sm w-full p-5 shadow-2xl space-y-4 text-right">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+        <div className="bg-[var(--mx-card)] border border-[color:color-mix(in_srgb,var(--mx-price)_40%,transparent)] rounded-[var(--mx-radius)] max-w-sm w-full p-5 shadow-2xl space-y-4 text-right">
+          <div className="flex items-center justify-between pb-2 border-b border-[color:var(--mx-border)]">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+              <div className="w-8 h-8 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-price)_20%,transparent)] text-[color:var(--mx-price)] flex items-center justify-center font-bold">
                 <Lock className="w-4 h-4" />
               </div>
-              <h3 className="text-sm font-bold text-white">ورود به پنل مدیریت بازرگانی</h3>
+              <h3 className="text-sm font-bold text-[color:var(--mx-text)]">ورود به پنل مدیریت بازرگانی</h3>
             </div>
             <button
               onClick={() => setIsAdminPinModalOpen(false)}
-              className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800"
+              className="p-1 rounded-[calc(var(--mx-radius)*0.55)] text-[color:var(--mx-muted)] hover:text-[color:var(--mx-text)] hover:brightness-110"
             >
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <p className="text-xs text-[color:var(--mx-muted)] leading-relaxed">
             این بخش ویژه مدیریت بازرگانی نفیس‌استور است. لطفاً رمز عبور مدیریت را وارد کنید:
           </p>
 
@@ -1233,10 +1245,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   setAdminPinInput(e.target.value);
                   setAdminPinError('');
                 }}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2.5 text-center text-sm font-mono text-white tracking-widest focus:outline-none focus:border-amber-400"
+                className="w-full bg-[var(--mx-page)] border border-[color:var(--mx-border)] rounded-[calc(var(--mx-radius)*0.75)] px-3 py-2.5 text-center text-sm font-mono text-[color:var(--mx-text)] tracking-widest focus:outline-none focus:border-[color:var(--mx-price)]"
               />
               {adminPinError && (
-                <p className="text-[11px] text-rose-400 pt-1.5 text-center font-medium">
+                <p className="text-[11px] text-[color:var(--mx-accent)] pt-1.5 text-center font-medium">
                   {adminPinError}
                 </p>
               )}
@@ -1245,14 +1257,14 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             <div className="flex items-center gap-2">
               <button
                 type="submit"
-                className="flex-1 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-slate-950 font-bold text-xs transition cursor-pointer shadow-md"
+                className="flex-1 py-2 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-btn)] hover:brightness-110 text-[color:var(--mx-btn-text)] font-bold text-xs transition cursor-pointer shadow-md"
               >
                 ورود به پنل ادمین
               </button>
               <button
                 type="button"
                 onClick={() => setIsAdminPinModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition cursor-pointer"
+                className="px-4 py-2 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-card)] hover:brightness-110 text-[color:var(--mx-body)] text-xs transition cursor-pointer"
               >
                 انصراف
               </button>
@@ -1265,12 +1277,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
   if (isStandalone) {
     return (
-      <div className="w-full min-h-screen bg-[#0e1621] flex flex-col items-center justify-start selection:bg-amber-500 selection:text-slate-900">
+      <div style={themeVars} className="w-full min-h-screen bg-[var(--mx-page)] flex flex-col items-center justify-start selection:bg-[var(--mx-btn)] selection:text-[color:var(--mx-btn-text)]">
         {/* Desktop Header Bar (hidden on mobile and inside Telegram) */}
-        <div className="w-full max-w-lg hidden md:flex items-center justify-between py-2.5 px-4 bg-slate-900/90 border-b border-slate-800 text-xs text-slate-300 z-30">
+        <div className="w-full max-w-lg hidden md:flex items-center justify-between py-2.5 px-4 bg-[color-mix(in_srgb,var(--mx-card)_90%,transparent)] border-b border-[color:var(--mx-border)] text-xs text-[color:var(--mx-body)] z-30">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="font-bold text-white">مینی‌آپ تلگرام نفیس تجارت هوشمند</span>
+            <span className="w-2 h-2 rounded-full bg-[var(--mx-btn)] animate-pulse"></span>
+            <span className="font-bold text-[color:var(--mx-text)]">مینی‌آپ تلگرام نفیس تجارت هوشمند</span>
           </div>
           {onSwitchToAdmin && (
             <button
@@ -1283,10 +1295,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   setAdminPinError('');
                 }
               }}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 font-semibold transition cursor-pointer text-[11px]"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-price)_20%,transparent)] hover:brightness-110 text-[color:var(--mx-price)] border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)] font-semibold transition cursor-pointer text-[11px]"
               title="ورود به پنل شکار کالا، کاتالوگ و تنظیمات"
             >
-              <Lock className="w-3 h-3 text-amber-400" />
+              <Lock className="w-3 h-3 text-[color:var(--mx-price)]" />
               <span>⚙️ پنل مدیریت بازرگانی</span>
             </button>
           )}
@@ -1303,33 +1315,33 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
       {/* Left Column: Telegram Mini App Simulator in Phone Frame */}
       <div className="lg:col-span-7 flex flex-col items-center">
         {/* Quick Testing Bar for Approval Gatekeeping */}
-        <div className="w-full max-w-[390px] mb-3 flex items-center justify-between p-2.5 rounded-2xl bg-slate-900 border border-slate-800 text-xs">
-          <div className="flex items-center gap-1.5 font-semibold text-slate-300">
+        <div className="w-full max-w-[390px] mb-3 flex items-center justify-between p-2.5 rounded-[var(--mx-radius)] bg-[var(--mx-card)] border border-[color:var(--mx-border)] text-xs">
+          <div className="flex items-center gap-1.5 font-semibold text-[color:var(--mx-body)]">
             {previewAsApproved ? (
-              <Unlock className="w-4 h-4 text-emerald-400" />
+              <Unlock className="w-4 h-4 text-[color:var(--mx-ok)]" />
             ) : (
-              <Lock className="w-4 h-4 text-amber-400" />
+              <Lock className="w-4 h-4 text-[color:var(--mx-price)]" />
             )}
             <span>نمایش قیمت‌ها:</span>
           </div>
 
-          <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <div className="flex items-center gap-1 bg-[var(--mx-page)] p-1 rounded-[calc(var(--mx-radius)*0.75)] border border-[color:var(--mx-border)]">
             <button
               onClick={() => setPreviewAsApproved(true)}
-              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition ${
+              className={`px-2.5 py-1 rounded-[calc(var(--mx-radius)*0.55)] font-bold text-[11px] transition ${
                 previewAsApproved
-                  ? 'bg-emerald-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] shadow-sm'
+                  : 'text-[color:var(--mx-muted)] hover:text-[color:var(--mx-text)]'
               }`}
             >
               همکار تایید شده
             </button>
             <button
               onClick={() => setPreviewAsApproved(false)}
-              className={`px-2.5 py-1 rounded-lg font-bold text-[11px] transition ${
+              className={`px-2.5 py-1 rounded-[calc(var(--mx-radius)*0.55)] font-bold text-[11px] transition ${
                 !previewAsApproved
-                  ? 'bg-amber-500 text-slate-950 shadow-sm'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] shadow-sm'
+                  : 'text-[color:var(--mx-muted)] hover:text-[color:var(--mx-text)]'
               }`}
             >
               مهمان (قیمت قفل)
@@ -1337,11 +1349,11 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
           </div>
         </div>
 
-        <div className="telegram-phone-mockup relative w-full max-w-[390px] rounded-[44px] p-3.5 bg-slate-950 shadow-2xl border-4 border-slate-700/80 ring-1 ring-slate-800">
+        <div className="telegram-phone-mockup relative w-full max-w-[390px] rounded-[44px] p-3.5 bg-[var(--mx-page)] shadow-2xl border-4 border-[color:var(--mx-border)] ring-1 ring-[color:var(--mx-border)]">
           {/* Dynamic Island / Speaker Notch */}
           <div className="absolute top-5 left-1/2 -translate-x-1/2 w-28 h-5 bg-black rounded-full z-30 flex items-center justify-center">
-            <div className="w-2.5 h-2.5 rounded-full bg-slate-900 border border-slate-800 mr-2"></div>
-            <div className="w-1.5 h-1.5 rounded-full bg-indigo-950"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-[var(--mx-card)] border border-[color:var(--mx-border)] mr-2"></div>
+            <div className="w-1.5 h-1.5 rounded-full bg-[var(--mx-btn)]"></div>
           </div>
 
           {renderScreenContent()}
@@ -1351,56 +1363,56 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
       {/* Right Column: Implementation Guide & Live Currency Rates */}
       <div className="lg:col-span-5 space-y-6">
         {/* Live Currency Rates Board */}
-        <div className="bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="bg-[color-mix(in_srgb,var(--mx-card)_90%,transparent)] border border-[color:var(--mx-border)] rounded-3xl p-5 space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-[color:var(--mx-border)]">
             <div className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-amber-400" />
-              <h3 className="font-bold text-white text-base">
+              <TrendingUp className="w-5 h-5 text-[color:var(--mx-price)]" />
+              <h3 className="font-bold text-[color:var(--mx-text)] text-base">
                 تابلو زنده نرخ ارزهای تجاری بازرگانی
               </h3>
             </div>
-            <span className="text-[10px] text-slate-400 font-mono">ساعت: {currencyRates.lastUpdated}</span>
+            <span className="text-[10px] text-[color:var(--mx-muted)] font-mono">ساعت: {currencyRates.lastUpdated}</span>
           </div>
 
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-[color:var(--mx-muted)]">
             نرخ‌های مرجع استعلام از سایت‌های رسمی (TGJU / AlanChand / Navasan / ArzDigital):
           </p>
 
           <div className="grid grid-cols-3 gap-2.5 text-center">
-            <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/50 space-y-1">
-              <div className="text-[11px] text-slate-400">دلار آمریکا (USD)</div>
-              <div className="text-sm font-extrabold text-amber-300 font-mono">
+            <div className="bg-[color-mix(in_srgb,var(--mx-card)_60%,transparent)] p-3 rounded-[var(--mx-radius)] border border-[color:var(--mx-border)] space-y-1">
+              <div className="text-[11px] text-[color:var(--mx-muted)]">دلار آمریکا (USD)</div>
+              <div className="text-sm font-extrabold text-[color:var(--mx-price)] font-mono">
                 {currencyRates.usd.toLocaleString('en-US')}
               </div>
-              <div className="text-[10px] text-slate-500">تومان</div>
+              <div className="text-[10px] text-[color:var(--mx-muted)]">تومان</div>
             </div>
 
-            <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/50 space-y-1">
-              <div className="text-[11px] text-slate-400">درهم امارات (AED)</div>
-              <div className="text-sm font-extrabold text-sky-400 font-mono">
+            <div className="bg-[color-mix(in_srgb,var(--mx-card)_60%,transparent)] p-3 rounded-[var(--mx-radius)] border border-[color:var(--mx-border)] space-y-1">
+              <div className="text-[11px] text-[color:var(--mx-muted)]">درهم امارات (AED)</div>
+              <div className="text-sm font-extrabold text-[color:var(--mx-accent)] font-mono">
                 {currencyRates.aed.toLocaleString('en-US')}
               </div>
-              <div className="text-[10px] text-slate-500">واردات دبی</div>
+              <div className="text-[10px] text-[color:var(--mx-muted)]">واردات دبی</div>
             </div>
 
-            <div className="bg-slate-800/60 p-3 rounded-2xl border border-slate-700/50 space-y-1">
-              <div className="text-[11px] text-slate-400">یوان چین (CNY)</div>
-              <div className="text-sm font-extrabold text-rose-400 font-mono">
+            <div className="bg-[color-mix(in_srgb,var(--mx-card)_60%,transparent)] p-3 rounded-[var(--mx-radius)] border border-[color:var(--mx-border)] space-y-1">
+              <div className="text-[11px] text-[color:var(--mx-muted)]">یوان چین (CNY)</div>
+              <div className="text-sm font-extrabold text-[color:var(--mx-accent)] font-mono">
                 {currencyRates.cny.toLocaleString('en-US')}
               </div>
-              <div className="text-[10px] text-slate-500">خرید 1688</div>
+              <div className="text-[10px] text-[color:var(--mx-muted)]">خرید 1688</div>
             </div>
           </div>
         </div>
 
         {/* Protection / B2B Wholesaler Shield Info */}
-        <div className="nfs-info-card bg-gradient-to-br from-indigo-950/40 to-slate-900 border border-indigo-800/40 rounded-3xl p-5 space-y-3">
-          <div className="flex items-center gap-2 text-indigo-300 font-bold text-sm">
-            <ShieldCheck className="w-5 h-5 text-emerald-400" />
+        <div className="nfs-info-card bg-gradient-to-br from-[color:var(--mx-card)] to-[color:var(--mx-card)] border border-[color:color-mix(in_srgb,var(--mx-accent)_40%,transparent)] rounded-3xl p-5 space-y-3">
+          <div className="flex items-center gap-2 text-[color:var(--mx-accent)] font-bold text-sm">
+            <ShieldCheck className="w-5 h-5 text-[color:var(--mx-ok)]" />
             <span>مکانیزم محافظت از قیمت‌های عمده (B2B Gatekeeping)</span>
           </div>
 
-          <p className="text-xs text-slate-300 leading-relaxed">
+          <p className="text-xs text-[color:var(--mx-body)] leading-relaxed">
             طبق نیاز اعلام شده، هیچ کاربری بدون تایید قبلی مدیریت به قیمت‌های عمده فروشی دسترسی ندارد.
             کاربران ناشناس تنها تصویر و ویژگی‌های فنی کالا را مشاهده می‌کنند و برای دیدن قیمت‌های پلکانی ملزم به ثبت نام و تایید در پنل ادمین هستند.
           </p>
