@@ -678,13 +678,14 @@ function str_list($arr, $maxItems, $maxLen)
 function catalog_categories()
 {
     return ['پاوربانک و شارژر', 'پوشیدنی هوشمند', 'هدفون و صوتی', 'کیبورد و لوازم گیمینگ', 'خانه هوشمند و روشنایی',
-            'ردیاب و ابزار ارتباطی', 'آشپزخانه و نوشیدنی', 'خودرو، سفر و فضای باز', 'متفرقه'];
+            'ردیاب و ابزار ارتباطی', 'آشپزخانه و نوشیدنی', 'خودرو، سفر و فضای باز', 'کابل و تبدیل', 'متفرقه'];
 }
 
 function normalize_category($title, $cat)
 {
     $rules = [
         ['خودرو، سفر و فضای باز', ['جامپ استارتر']],
+        ['کابل و تبدیل', ['کابل', 'مبدل', 'تبدیل ']],
         ['پاوربانک و شارژر', ['پاوربانک', 'شارژر', 'پاور بانک']],
         ['پوشیدنی هوشمند', ['ساعت هوشمند', 'مچ‌بند', 'دستبند', 'حلقه هوشمند', 'عینک']],
         ['هدفون و صوتی', ['هندزفری', 'هدفون', 'ایرپاد', 'اسپیکر']],
@@ -987,7 +988,7 @@ function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
     }
     $cnyRate = !empty($rates['cny']) ? (float)$rates['cny'] : ($usdRate / 7.2);
     $rows = [];
-    foreach (array_slice(array_values((array)$items), 0, 50) as $idx => $g) {
+    foreach (array_slice(array_values((array)$items), 0, 100) as $idx => $g) {
         $row = ['index' => $idx, 'status' => 'skip', 'reason' => '', 'title' => '', 'sku' => '', 'priceToman' => 0, 'category' => ''];
         if (!is_array($g)) {
             $row['reason'] = 'آیتم نامعتبر';
@@ -1008,6 +1009,9 @@ function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
             }
             if ($cur === 'EUR') {
                 return $p * 1.09;
+            }
+            if ($cur === 'AED') {
+                return $p * ((!empty($rates['aed']) ? (float)$rates['aed'] : DEFAULT_AED_RATE) / $usdRate);
             }
             return $p;
         };
@@ -1066,7 +1070,7 @@ function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
             'faFeatures' => isset($g['faFeatures']) && is_array($g['faFeatures']) ? $g['faFeatures'] : [],
             'technicalSpecs' => isset($g['technicalSpecs']) && is_array($g['technicalSpecs']) ? $g['technicalSpecs'] : [],
             'category' => ($categoryAsBrand && $brand !== '') ? $brand : $cat,
-            'subCategory' => ($categoryAsBrand && $brand !== '') ? normalize_category($row['title'], $cat) : '',
+            'subCategory' => ($categoryAsBrand && $brand !== '') ? clean(!empty($g['subCategory']) ? $g['subCategory'] : $cat, 100) : '',
             'brand' => $brand,
             'modelOrSku' => $sku,
             'tags' => isset($g['tags']) && is_array($g['tags']) ? $g['tags'] : [],
@@ -1954,13 +1958,25 @@ if ($action === 'ingest_batch' && $method === 'POST') {
                 }
                 $p = $r['product'];
                 $hit = false;
+                $skuL = mb_strtolower((string)($p['modelOrSku'] ?? ''), 'UTF-8');
                 foreach ($existing as &$it) {
-                    if (!empty($p['externalId']) && ($it['externalId'] ?? '') === $p['externalId']) {
+                    $same = !empty($p['externalId']) && ($it['externalId'] ?? '') === $p['externalId'];
+                    if (!$same && mb_strlen($skuL, 'UTF-8') >= 5 && !empty($it['id'])) {
+                        $hay = mb_strtolower(($it['faTitle'] ?? '') . ' ' . ($it['originalTitle'] ?? '') . ' ' . ($it['modelOrSku'] ?? ''), 'UTF-8');
+                        $same = mb_strpos($hay, $skuL, 0, 'UTF-8') !== false;
+                    }
+                    if ($same) {
                         $p['id'] = $it['id'] ?? $p['id'];
                         $p['isPostedToTelegram'] = !empty($it['isPostedToTelegram']);
                         if (!empty($it['images']) && empty($p['images'])) {
                             $p['images'] = $it['images'];
                             $p['mainImage'] = $it['mainImage'] ?? '';
+                        }
+                        if (empty($p['sourceUrl']) && !empty($it['sourceUrl'])) {
+                            $p['sourceUrl'] = $it['sourceUrl'];
+                        }
+                        if (!empty($it['supplier']) && empty($p['supplier']['name'])) {
+                            $p['supplier'] = $it['supplier'];
                         }
                         $it = $p;
                         $hit = true;

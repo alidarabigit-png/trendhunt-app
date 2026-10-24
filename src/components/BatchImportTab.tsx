@@ -23,7 +23,7 @@ interface Loaded {
   error?: string;
 }
 
-const MAX_ITEMS = 50;
+const MAX_ITEMS = 100;
 
 // خروجی ایجنت: یک آبجکت، آرایه، یا چند آبجکت پشت‌سرهم؛ با یا بدون ```json
 const parseItems = (text: string): any[] => {
@@ -45,7 +45,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
   const [files, setFiles] = useState<Loaded[]>([]);
   const [pasted, setPasted] = useState('');
   const [brand, setBrand] = useState('');
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState('CNY');
   const [margin, setMargin] = useState('25');
   const [categoryAsBrand, setCategoryAsBrand] = useState(true);
   const [announce, setAnnounce] = useState(false);
@@ -249,8 +249,9 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
               }}
               className="w-full mt-1 bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white"
             >
-              <option value="USD">دلار (USD)</option>
               <option value="CNY">یوان (CNY)</option>
+              <option value="USD">دلار (USD)</option>
+              <option value="AED">درهم (AED)</option>
               <option value="EUR">یورو (EUR)</option>
             </select>
           </div>
