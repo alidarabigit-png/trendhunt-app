@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { UploadCloud, Eye, CheckCircle2, AlertTriangle, Loader2, X } from 'lucide-react';
+import { UploadCloud, Eye, CheckCircle2, AlertTriangle, Loader2, X, Copy } from 'lucide-react';
+import { BATCH_AGENT_INSTRUCTION } from './agentInstruction';
 
 interface BatchImportTabProps {
   adminKey: string | null;
@@ -51,6 +52,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
   const [rows, setRows] = useState<PreviewRow[] | null>(null);
   const [done, setDone] = useState<{ added: number; updated: number; posted: number } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const { items, pasteError } = useMemo(() => {
@@ -128,6 +130,21 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
     }
   };
 
+  const copyInstruction = async () => {
+    try {
+      await navigator.clipboard.writeText(BATCH_AGENT_INSTRUCTION);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = BATCH_AGENT_INSTRUCTION;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   const okCount = rows ? rows.filter((r) => r.status !== 'skip').length : 0;
 
   return (
@@ -143,6 +160,14 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
             محصول تکراری (برند + کد مدل) دوباره ساخته نمی‌شود و فقط به‌روز می‌شود.
           </p>
         </div>
+
+        <button
+          onClick={copyInstruction}
+          className="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-[11px] text-slate-200 flex items-center gap-1.5 cursor-pointer"
+        >
+          <Copy className="w-3.5 h-3.5" />
+          {copied ? 'کپی شد' : 'کپی دستورالعمل ایجنت (فرمت JSON سازگار با برنامه)'}
+        </button>
 
         <label className="block border-2 border-dashed border-slate-700 hover:border-[#4A70A9] rounded-xl p-5 text-center cursor-pointer transition">
           <input
