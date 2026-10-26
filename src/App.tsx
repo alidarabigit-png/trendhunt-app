@@ -116,7 +116,7 @@ export default function App() {
   });
 
   // ۱) بررسی کلید ادمین در هدر ذخیره‌سازی
-  const syncToBackend = (items: ProductItem[]) => {
+  const syncToBackend = (items: ProductItem[], removedIds: string[] = []) => {
     const adminKey = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('nfs_admin_key') : null;
     if (viewMode !== 'admin' || !adminKey) return;
     try {
@@ -125,7 +125,8 @@ export default function App() {
       fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Admin-Key': adminKey },
-        body: JSON.stringify({ products: items }),
+        // removedIds: محصولاتی که کاربر حذف کرده؛ بدون این، سرور آن‌ها را دوباره برمی‌گرداند
+        body: JSON.stringify({ products: items, baseIds: removedIds }),
       }).catch((e) => console.warn('Host backend sync deferred', e));
     } catch (e) {}
   };
@@ -135,13 +136,15 @@ export default function App() {
   ) => {
     setProductsState((prev) => {
       const next = typeof value === 'function' ? value(prev) : value;
+      const nextIds = new Set(next.map((p) => p.id));
+      const removedIds = prev.filter((p) => !nextIds.has(p.id)).map((p) => String(p.id));
       const cleanUnique = deduplicateProducts(next);
       try {
         localStorage.setItem('nfs_products_catalog', JSON.stringify(cleanUnique));
       } catch (e) {
         console.warn('Failed to save products to storage', e);
       }
-      syncToBackend(cleanUnique);
+      syncToBackend(cleanUnique, removedIds);
       return cleanUnique;
     });
   };

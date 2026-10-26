@@ -92,6 +92,7 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('همه');
+  const [selectedBrand, setSelectedBrand] = useState('همه');
   const [expandedProduct, setExpandedProduct] = useState<string | null>(products[0]?.id || null);
   const [analyzingProduct, setAnalyzingProduct] = useState<ProductItem | null>(null);
   const [galleryProduct, setGalleryProduct] = useState<ProductItem | null>(null);
@@ -174,7 +175,8 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
       p.tags.some((t) => t.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesCat = selectedCategory === 'همه' || p.category === selectedCategory;
-    return matchesSearch && matchesCat;
+    const matchesBrand = selectedBrand === 'همه' || (p.brand || '').trim() === selectedBrand;
+    return matchesSearch && matchesCat && matchesBrand;
   });
 
   return (
@@ -951,6 +953,24 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
               </button>
             </div>
           </div>
+          {Array.from(new Set(products.map((p) => (p.brand || '').trim()).filter(Boolean))).length > 0 && (
+            <div className="flex items-center gap-2 overflow-x-auto pt-2 no-scrollbar">
+              <span className="text-[11px] text-slate-400 shrink-0">برند:</span>
+              {['همه', ...Array.from(new Set(products.map((p) => (p.brand || '').trim()).filter(Boolean)))].map((b) => (
+                <button
+                  key={b}
+                  onClick={() => setSelectedBrand(b)}
+                  className={`text-xs px-3 py-1 rounded-xl whitespace-nowrap cursor-pointer border ${
+                    selectedBrand === b
+                      ? 'bg-sky-500/30 text-sky-200 border-sky-400/60 font-bold'
+                      : 'bg-slate-800/90 text-slate-300 border-slate-700/60 hover:bg-slate-700'
+                  }`}
+                >
+                  {b}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

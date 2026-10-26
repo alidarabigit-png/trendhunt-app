@@ -71,6 +71,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   ui = null,
 }) => {
   const [activeCategory, setActiveCategory] = useState('همه');
+  const [activeBrand, setActiveBrand] = useState('همه');
   const isDarkMode = true;
   const [isMiniAppDrawerOpen, setIsMiniAppDrawerOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
@@ -164,8 +165,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
   const categories = ['همه', ...Array.from(new Set(cleanProducts.map((p) => p.category)))];
 
+  const brands = Array.from(new Set(cleanProducts.map((p) => (p.brand || '').trim()).filter(Boolean)));
+
   const filtered = cleanProducts.filter(
-    (p) => activeCategory === 'همه' || p.category === activeCategory
+    (p) =>
+      (activeCategory === 'همه' || p.category === activeCategory) &&
+      (activeBrand === 'همه' || (p.brand || '').trim() === activeBrand)
   );
 
   // Calculate tiered price based on slider quantity safely
@@ -1085,6 +1090,24 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         </button>
                       ))}
                     </div>
+                    {brands.length > 0 && (
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1 items-center">
+                        <span className="text-[10px] text-[color:var(--mx-muted)] shrink-0">برند:</span>
+                        {['همه', ...brands].map((b) => (
+                          <button
+                            key={b}
+                            onClick={() => setActiveBrand(b)}
+                            className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer border ${
+                              activeBrand === b
+                                ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] border-[color:var(--mx-btn)] font-bold'
+                                : 'bg-transparent text-[color:var(--mx-body)] border-[color:var(--mx-border)]'
+                            }`}
+                          >
+                            {b}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   {/* Products Feed inside Mini App */}

@@ -11,7 +11,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-define('API_VERSION', '2026.10.24-v5.4-bulk-images');
+define('API_VERSION', '2026.10.26-v6-taxonomy');
 define('ROOT_DIR', __DIR__);
 define('DATA_DIR', __DIR__ . '/data');
 define('UPLOADS_DIR', __DIR__ . '/uploads');
@@ -677,30 +677,45 @@ function str_list($arr, $maxItems, $maxLen)
 /* ------------------------------------------------------------------ */
 function catalog_categories()
 {
-    return ['پاوربانک و شارژر', 'پوشیدنی هوشمند', 'هدفون و صوتی', 'کیبورد و لوازم گیمینگ', 'خانه هوشمند و روشنایی',
-            'ردیاب و ابزار ارتباطی', 'آشپزخانه و نوشیدنی', 'خودرو، سفر و فضای باز', 'کابل و تبدیل', 'متفرقه'];
+    return ['شارژر دیواری و رومیزی', 'پاوربانک', 'شارژر بی‌سیم و مگ‌سیف', 'شارژر فندکی خودرو', 'کابل و تبدیل',
+            'هاب و داک USB-C', 'قاب و لوازم جانبی گوشی', 'پوشیدنی هوشمند', 'هدفون و صوتی', 'کیبورد و لوازم گیمینگ',
+            'دوربین و امنیت خانه', 'پروژکتور و تجهیزات کنفرانس', 'خانه هوشمند و روشنایی', 'ردیاب و ابزار ارتباطی',
+            'آشپزخانه و نوشیدنی', 'خودرو، سفر و فضای باز', 'متفرقه'];
 }
 
+/* قوانین دسته‌بندی بر اساس عنوان فارسی؛ حالت start یعنی کلمه باید ابتدای عنوان باشد */
 function normalize_category($title, $cat)
 {
     $rules = [
-        ['خودرو، سفر و فضای باز', ['جامپ استارتر']],
-        ['کابل و تبدیل', ['کابل', 'مبدل', 'تبدیل ']],
-        ['پاوربانک و شارژر', ['پاوربانک', 'شارژر', 'پاور بانک']],
-        ['پوشیدنی هوشمند', ['ساعت هوشمند', 'مچ‌بند', 'دستبند', 'حلقه هوشمند', 'عینک']],
-        ['هدفون و صوتی', ['هندزفری', 'هدفون', 'ایرپاد', 'اسپیکر']],
-        ['کیبورد و لوازم گیمینگ', ['کیبورد', 'ماوس', 'گیمینگ']],
-        ['خانه هوشمند و روشنایی', ['ریسه', 'موتور پرده', 'لامپ']],
-        ['ردیاب و ابزار ارتباطی', ['ردیاب', 'هات اسپات', 'مترجم', 'لوکیتور']],
-        ['آشپزخانه و نوشیدنی', ['مخلوط‌کن', 'همزن', 'فلاسک', 'قمقمه', 'ماگ', 'شیکر']],
-        ['خودرو، سفر و فضای باز', ['پنکه']],
+        ['خودرو، سفر و فضای باز', ['جامپ استارتر'], 'any'],
+        ['شارژر فندکی خودرو', ['شارژر فندکی', 'شارژر خودرو', 'شارژر بی‌سیم خودرو', 'شارژر وایرلس خودرو'], 'any'],
+        ['کابل و تبدیل', ['کابل', 'مبدل', 'تبدیل '], 'start'],
+        ['هاب و داک USB-C', ['هاب', 'داکینگ', 'داک '], 'start'],
+        ['قاب و لوازم جانبی گوشی', ['قاب', 'محافظ صفحه', 'محافظ لنز', 'کیت محافظ', 'گلس', 'گریپ', 'هولدر گوشی'], 'any'],
+        ['پوشیدنی هوشمند', ['ساعت هوشمند', 'مچ‌بند', 'دستبند', 'حلقه هوشمند', 'عینک'], 'any'],
+        ['دوربین و امنیت خانه', ['دوربین', 'زنگ تصویری', 'NVR', 'ان‌وی‌آر', 'سیستم امنیتی'], 'any'],
+        ['پروژکتور و تجهیزات کنفرانس', ['پروژکتور', 'کنفرانس', 'وب‌کم'], 'any'],
+        ['پاوربانک', ['پاوربانک', 'پاور بانک'], 'any'],
+        ['شارژر بی‌سیم و مگ‌سیف', ['شارژر بی‌سیم', 'شارژر وایرلس', 'مگ‌سیف', 'ایستگاه شارژ', 'پد شارژ', 'شارژر مگنتی'], 'any'],
+        ['شارژر دیواری و رومیزی', ['شارژر', 'آداپتور'], 'any'],
+        ['هدفون و صوتی', ['هندزفری', 'هدفون', 'ایرپاد', 'اسپیکر'], 'any'],
+        ['کیبورد و لوازم گیمینگ', ['کیبورد', 'ماوس', 'گیمینگ'], 'any'],
+        ['خانه هوشمند و روشنایی', ['ریسه', 'موتور پرده', 'لامپ', 'جاروبرقی', 'ترازو', 'آبخوری'], 'any'],
+        ['ردیاب و ابزار ارتباطی', ['ردیاب', 'هات اسپات', 'مترجم', 'لوکیتور'], 'any'],
+        ['آشپزخانه و نوشیدنی', ['مخلوط‌کن', 'همزن', 'فلاسک', 'قمقمه', 'ماگ', 'شیکر'], 'any'],
+        ['خودرو، سفر و فضای باز', ['پنکه'], 'any'],
     ];
-    $title = (string)$title;
+    $title = trim((string)$title);
     foreach ($rules as $r) {
         foreach ($r[1] as $k) {
-            if ($k !== '' && mb_strpos($title, $k, 0, 'UTF-8') !== false) {
-                return $r[0];
+            $pos = mb_strpos($title, $k, 0, 'UTF-8');
+            if ($pos === false) {
+                continue;
             }
+            if ($r[2] === 'start' && $pos !== 0) {
+                continue;
+            }
+            return $r[0];
         }
     }
     $cat = trim((string)$cat);
@@ -811,7 +826,7 @@ function build_product($in, $usdRate, $defaultMargin, $cacheImages)
     $score = max(0, min(100, $score));
 
     $product = [
-        'id'                     => 'HUNT-' . time() . '-' . mt_rand(1000, 9999),
+        'id'                     => 'HUNT-' . time() . '-' . substr(bin2hex(random_bytes(4)), 0, 7),
         'externalId'             => clean(isset($in['externalId']) ? $in['externalId'] : '', 100),
         'createdAt'              => date('Y-m-d'),
         'sourceUrl'              => $src,
@@ -1070,7 +1085,7 @@ function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
             'faFeatures' => isset($g['faFeatures']) && is_array($g['faFeatures']) ? $g['faFeatures'] : [],
             'technicalSpecs' => isset($g['technicalSpecs']) && is_array($g['technicalSpecs']) ? $g['technicalSpecs'] : [],
             'category' => ($categoryAsBrand && $brand !== '') ? $brand : $cat,
-            'subCategory' => ($categoryAsBrand && $brand !== '') ? clean(!empty($g['subCategory']) ? $g['subCategory'] : $cat, 100) : '',
+            'subCategory' => clean(!empty($g['subCategory']) ? $g['subCategory'] : (($categoryAsBrand && $brand !== '') ? $cat : ''), 100),
             'brand' => $brand,
             'modelOrSku' => $sku,
             'tags' => isset($g['tags']) && is_array($g['tags']) ? $g['tags'] : [],
@@ -1961,7 +1976,7 @@ if ($action === 'ingest_batch' && $method === 'POST') {
                 $skuL = mb_strtolower((string)($p['modelOrSku'] ?? ''), 'UTF-8');
                 foreach ($existing as &$it) {
                     $same = !empty($p['externalId']) && ($it['externalId'] ?? '') === $p['externalId'];
-                    if (!$same && mb_strlen($skuL, 'UTF-8') >= 5 && !empty($it['id'])) {
+                    if (!$same && mb_strlen($skuL, 'UTF-8') >= 5 && !empty($it['id']) && empty($it['externalId'])) {
                         $hay = mb_strtolower(($it['faTitle'] ?? '') . ' ' . ($it['originalTitle'] ?? '') . ' ' . ($it['modelOrSku'] ?? ''), 'UTF-8');
                         $same = mb_strpos($hay, $skuL, 0, 'UTF-8') !== false;
                     }

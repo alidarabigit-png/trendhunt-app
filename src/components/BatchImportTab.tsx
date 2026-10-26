@@ -48,7 +48,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
   const [brand, setBrand] = useState('');
   const [currency, setCurrency] = useState('CNY');
   const [margin, setMargin] = useState('25');
-  const [categoryAsBrand, setCategoryAsBrand] = useState(true);
+  const [categoryAsBrand, setCategoryAsBrand] = useState(false);
   const [announce, setAnnounce] = useState(false);
   const [rows, setRows] = useState<PreviewRow[] | null>(null);
   const [done, setDone] = useState<{ added: number; updated: number; posted: number } | null>(null);
@@ -273,7 +273,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
         <div className="space-y-1.5 text-[11px] text-slate-300">
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={categoryAsBrand} onChange={(e) => { setCategoryAsBrand(e.target.checked); setRows(null); }} />
-            همه محصولات در دسته‌ای به نام برند قرار بگیرند (دسته اصلی هر محصول به‌عنوان زیردسته ذخیره می‌شود)
+            همه محصولات در یک دسته به نام برند قرار بگیرند (برای کاتالوگ‌های بزرگ توصیه نمی‌شود؛ بهتر است دسته بر اساس نوع کالا باشد و برند جدا ذخیره و فیلتر شود)
           </label>
           <label className="flex items-center gap-2 cursor-pointer">
             <input type="checkbox" checked={announce} onChange={(e) => setAnnounce(e.target.checked)} />

@@ -25,7 +25,7 @@ OBJECT SCHEMA (exact keys)
   "faFullDesc": "Persian, 100-200 words, 2-3 short paragraphs separated by \\n\\n, factual, no hype, no unverifiable claims",
   "faFeatures": ["4-8 short Persian bullets taken from the source"],
   "technicalSpecs": {"Persian label": "value with units"},   // max 12 real specs
-  "category": "EXACTLY one of: پاوربانک و شارژر | پوشیدنی هوشمند | هدفون و صوتی | کیبورد و لوازم گیمینگ | خانه هوشمند و روشنایی | ردیاب و ابزار ارتباطی | آشپزخانه و نوشیدنی | خودرو، سفر و فضای باز | کابل و تبدیل | متفرقه   (copy exactly; never invent a category)",
+  "category": "EXACTLY one of: شارژر دیواری و رومیزی | پاوربانک | شارژر بی‌سیم و مگ‌سیف | شارژر فندکی خودرو | کابل و تبدیل | هاب و داک USB-C | قاب و لوازم جانبی گوشی | پوشیدنی هوشمند | هدفون و صوتی | کیبورد و لوازم گیمینگ | دوربین و امنیت خانه | پروژکتور و تجهیزات کنفرانس | خانه هوشمند و روشنایی | ردیاب و ابزار ارتباطی | آشپزخانه و نوشیدنی | خودرو، سفر و فضای باز | متفرقه   (copy exactly; never invent a category)",
   "subCategory": "optional finer Persian product type, free text (e.g. شارژر دیواری, شارژر فندکی خودرو, کابل شارژ و دیتا). Use the same wording for the same type across all files.",
   "tags": ["up to 8 Persian search keywords, include the model number"],
   "mainImage": "direct https URL of the best product photo, or null",
