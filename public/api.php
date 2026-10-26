@@ -11,7 +11,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', '0');
 
-define('API_VERSION', '2026.10.26-v6-taxonomy');
+define('API_VERSION', '2026.10.27-v6.1-locked-category');
 define('ROOT_DIR', __DIR__);
 define('DATA_DIR', __DIR__ . '/data');
 define('UPLOADS_DIR', __DIR__ . '/uploads');
@@ -836,6 +836,7 @@ function build_product($in, $usdRate, $defaultMargin, $cacheImages)
         'faFullDesc'             => clean(isset($in['faFullDesc']) ? $in['faFullDesc'] : '', 6000),
         'faFeatures'             => str_list(isset($in['faFeatures']) ? $in['faFeatures'] : [], 12, 300),
         'technicalSpecs'         => $specs,
+        'categoryLocked'         => !empty($in['categoryLocked']),
         'category'               => !empty($in['_keepCategory']) ? clean(isset($in['category']) && $in['category'] !== '' ? $in['category'] : 'متفرقه', 100) : normalize_category($faTitle, isset($in['category']) ? $in['category'] : ''),
         'tags'                   => str_list(isset($in['tags']) ? $in['tags'] : [], 12, 60),
         'mainImage'              => isset($images[0]) ? $images[0] : '',
@@ -1075,7 +1076,8 @@ function batch_prepare($items, $brand, $currency, $margin, $categoryAsBrand)
         }
         $in = [
             '_relaxed' => true,
-            '_keepCategory' => ($categoryAsBrand && $brand !== ''),
+            '_keepCategory' => (($categoryAsBrand && $brand !== '') || (!empty($g['categoryLocked']) && in_array(clean(isset($g['category']) ? $g['category'] : '', 100), catalog_categories(), true))),
+            'categoryLocked' => !empty($g['categoryLocked']),
             'externalId' => $extId,
             'sourceUrl' => '',
             'originalTitle' => clean(isset($g['originalTitle']) && $g['originalTitle'] ? $g['originalTitle'] : $row['title'], 400),
