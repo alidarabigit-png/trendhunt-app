@@ -99,9 +99,9 @@ ${result.executiveSummary}
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-[#0B111C] border border-[#25395A] rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl text-white">
+      <div className="bg-[#0B0C0E] border border-[#2A2D35] rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden shadow-2xl text-white">
         {/* Header */}
-        <div className="p-4 sm:p-5 border-b border-[#25395A] flex items-center justify-between">
+        <div className="p-4 sm:p-5 border-b border-[#2A2D35] flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
               <Sparkles className="w-5 h-5 text-amber-300" />
@@ -208,9 +208,9 @@ ${result.executiveSummary}
                   <div className="text-[9px] text-slate-500">تک‌فروشی مرجع</div>
                 </div>
 
-                <div className="bg-[#4A70A9]/15 border border-[#4A70A9]/40 p-3 rounded-2xl space-y-1">
-                  <div className="text-[10px] text-[#8FABD4] font-medium">حاشیه سود ناخالص:</div>
-                  <div className="text-sm sm:text-base font-black text-[#8FABD4] font-mono">
+                <div className="bg-[#A91D2E]/15 border border-[#A91D2E]/40 p-3 rounded-2xl space-y-1">
+                  <div className="text-[10px] text-[#E0707F] font-medium">حاشیه سود ناخالص:</div>
+                  <div className="text-sm sm:text-base font-black text-[#E0707F] font-mono">
                     +{result.grossMarginPercent}%
                   </div>
                   <div className="text-[9px] text-slate-300">
@@ -320,7 +320,7 @@ ${result.executiveSummary}
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-[#25395A] bg-slate-950/80 flex items-center justify-between gap-3">
+        <div className="p-4 border-t border-[#2A2D35] bg-slate-950/80 flex items-center justify-between gap-3">
           <button
             onClick={handleFetchAnalysis}
             disabled={loading}

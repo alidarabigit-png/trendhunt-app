@@ -30,9 +30,11 @@ import {
   Minus,
   Info,
   FileText,
+  ChevronDown,
 } from 'lucide-react';
 import { ProductItem, CustomerUser, CurrencyRates, MiniAppNotification, CustomerInquiry, MiniAppUi, DEFAULT_MINIAPP_UI } from '../types';
 import { NfsLogo } from './NfsLogo';
+import { RateBar } from './RateBar';
 import { deduplicateProducts } from '../utils/catalogUtils';
 
 interface TelegramMiniAppPreviewProps {
@@ -52,7 +54,7 @@ interface TelegramMiniAppPreviewProps {
   ui?: MiniAppUi | null;
 }
 
-const PLACEHOLDER_IMG = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#EFECE3"/><rect x="60" y="70" width="80" height="60" rx="8" fill="none" stroke="#8FABD4" stroke-width="4"/><circle cx="82" cy="90" r="7" fill="#8FABD4"/><path d="M66 124l24-22 16 14 12-10 18 18z" fill="#4A70A9"/></svg>');
+const PLACEHOLDER_IMG = "data:image/svg+xml;utf8," + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#F6F7F9"/><rect x="60" y="70" width="80" height="60" rx="8" fill="none" stroke="#E0707F" stroke-width="4"/><circle cx="82" cy="90" r="7" fill="#E0707F"/><path d="M66 124l24-22 16 14 12-10 18 18z" fill="#A91D2E"/></svg>');
 
 export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   products,
@@ -72,6 +74,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 }) => {
   const [activeCategory, setActiveCategory] = useState('همه');
   const [activeBrand, setActiveBrand] = useState('همه');
+  const [isCategoryOpen, setIsCategoryOpen] = useState(false);
   const isDarkMode = true;
   const [isMiniAppDrawerOpen, setIsMiniAppDrawerOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
@@ -240,9 +243,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
     >
             {/* Telegram Header Bar */}
             <div
-              className={`px-3.5 pt-8 pb-3 border-b flex items-center justify-between z-20 ${
-                isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border-[color:var(--mx-border)]'
-              }`}
+              className="px-3.5 pt-8 pb-3 border-b-[3px] border-[#A91D2E] flex items-center justify-between z-20 bg-[#0B0C0E] text-white" 
             >
               {miniAppView === 'detail' ? (
                 <div className="flex items-center gap-2">
@@ -261,22 +262,17 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  {/* Mobile Drawer Trigger for Mini App */}
+                  {/* دکمه منو + لوگو */}
                   <button
-                    onClick={() => setIsMiniAppDrawerOpen(true)}
-                    className="p-1.5 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_14%,transparent)] text-[color:var(--mx-accent)] border border-[color:var(--mx-border)] transition cursor-pointer"
-                    title="باز کردن منوی کشویی مینی‌آپ"
+                    onClick={(e) => { e.stopPropagation(); setIsMiniAppDrawerOpen((v) => !v); }}
+                    className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-[#A91D2E] hover:bg-[#871523] text-white text-xs font-bold transition cursor-pointer"
+                    title="منو"
                   >
-                    <Menu className="w-4 h-4" />
+                    <span>منو</span>
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isMiniAppDrawerOpen ? 'rotate-180' : ''}`} />
                   </button>
 
-                  <div className="text-right">
-                    <div className="text-xs font-bold flex items-center gap-1">
-                      <span className="text-[color:var(--mx-accent)] font-mono font-black">NFS</span>
-                      <span>کاتالوگ نفیس تجارت هوشمند</span>
-                    </div>
-                    <div className="text-[10px] opacity-75">nfs.nafisstore.com</div>
-                  </div>
+                  <NfsLogo size="sm" variant="dark" />
                 </div>
               )}
 
@@ -532,34 +528,15 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             )}
 
             {/* Mini App Slide-Out Drawer (منوی کشویی سرسره‌ای از سمت راست داخل مینی‌آپ) */}
-            {/* Backdrop */}
-            <div
-              onClick={() => setIsMiniAppDrawerOpen(false)}
-              className={`absolute inset-0 bg-black/70 backdrop-blur-xs z-40 transition-opacity duration-300 ${
-                isMiniAppDrawerOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
-              }`}
-            />
-
-            {/* Drawer Container (Sliding from Right in RTL) */}
+            {/* منوی کشویی رو به پایین (Slide-Down Dropdown) */}
+            {isMiniAppDrawerOpen && (
+              <div onClick={() => setIsMiniAppDrawerOpen(false)} onTouchStart={() => setIsMiniAppDrawerOpen(false)} className="absolute inset-0 z-40 bg-black/20" />
+            )}
+            {isMiniAppDrawerOpen && (
             <aside
-              className={`absolute top-0 bottom-0 right-0 z-50 w-72 max-w-[85%] ${
-                isDarkMode ? 'bg-[var(--mx-page)] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border-l border-[color:var(--mx-border)]'
-              } shadow-2xl flex flex-col justify-between transition-transform duration-300 ease-out transform ${
-                isMiniAppDrawerOpen ? 'translate-x-0' : 'translate-x-full'
-              }`}
+              onClick={(e) => e.stopPropagation()}
+              className="absolute top-[68px] left-3 right-3 z-50 max-h-[72%] rounded-2xl bg-[var(--mx-card)] text-[color:var(--mx-text)] border border-[color:var(--mx-border)] shadow-lg flex flex-col animate-[slideDown_0.22s_ease-out]"
             >
-              {/* Drawer Header */}
-              <div className="p-4 border-b border-[color:var(--mx-border)] flex items-center justify-between">
-                <NfsLogo size="sm" />
-
-                <button
-                  onClick={() => setIsMiniAppDrawerOpen(false)}
-                  className="p-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[color-mix(in_srgb,var(--mx-text)_8%,transparent)] hover:bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] text-[color:var(--mx-body)] hover:text-[color:var(--mx-text)] transition cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
               {/* Drawer Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 no-scrollbar text-xs">
                 {/* Customer Account Summary Card */}
@@ -756,6 +733,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 <span>NFS Telegram MiniApp v2.4</span>
               </div>
             </aside>
+            )}
 
             {/* Telegram Mini App Internal Content */}
             <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-3">
@@ -984,9 +962,9 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         <Info className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
                         <span>مشخصات فنی و استانداردهای کالا:</span>
                       </div>
-                      <div className="divide-y divide-white/5 text-[10px]">
+                      <div className="text-[10px] rounded-xl overflow-hidden border border-[color:var(--mx-border)]">
                         {Object.entries(currentProduct.technicalSpecs).map(([key, val], idx) => (
-                          <div key={idx} className="py-1.5 flex items-center justify-between">
+                          <div key={idx} className={`px-2 py-1.5 flex items-center justify-between ${idx % 2 === 0 ? 'bg-[#F6F7F9]' : 'bg-white'}`}>
                             <span className="opacity-70">{key}:</span>
                             <span className="font-semibold text-right max-w-[60%]">{val}</span>
                           </div>
@@ -1010,7 +988,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         <li key={i}>{f}</li>
                       ))}
                     </ul>
-                    <p className="pt-2 border-t border-[color:var(--mx-border)]" style={{ fontSize: t.roles.body.size, fontWeight: t.roles.body.weight, color: t.roles.body.color, lineHeight: t.roles.body.lineHeight, whiteSpace: 'pre-line' }}>
+                    <p className="pt-2 border-t border-[color:var(--mx-border)] text-justify-fa" style={{ fontSize: t.roles.body.size, fontWeight: t.roles.body.weight, color: t.roles.body.color, lineHeight: t.roles.body.lineHeight, whiteSpace: 'pre-line' }}>
                       {currentProduct.faFullDesc}
                     </p>
                   </div>
@@ -1030,6 +1008,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       </p>
                     </div>
                   )}
+
+                  <RateBar rates={currencyRates} />
 
                   {/* User Greeting & Search inside Mini App */}
                   <div className="space-y-2 pt-1">
@@ -1072,23 +1052,39 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       )}
                     </div>
 
-                    {/* Category Chips inside Mini App */}
-                    <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1">
-                      {categories.map((cat) => (
-                        <button
-                          key={cat}
-                          onClick={() => setActiveCategory(cat)}
-                          className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer ${
-                            activeCategory === cat
-                              ? 'bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] font-bold shadow-sm shadow-[var(--mx-accent)]/30'
-                              : isDarkMode
-                              ? 'bg-[var(--mx-border)] text-[color:var(--mx-body)]'
-                              : 'bg-[var(--mx-card)] text-[color:var(--mx-muted)]'
-                          }`}
-                        >
-                          {cat}
-                        </button>
-                      ))}
+                    {/* منوی کشویی دسته‌بندی */}
+                    <div className="relative">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setIsCategoryOpen((v) => !v); }}
+                        className="w-full flex items-center justify-between gap-2 bg-[var(--mx-card)] border border-[color:var(--mx-border)] rounded-xl px-3 py-2 text-xs font-bold cursor-pointer shadow-xs"
+                      >
+                        <span className="flex items-center gap-1.5 truncate">
+                          <Package className="w-3.5 h-3.5 text-[color:var(--mx-accent)]" />
+                          <span className="truncate">{activeCategory === 'همه' ? 'همه دسته‌بندی‌ها' : activeCategory}</span>
+                        </span>
+                        <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isCategoryOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      {isCategoryOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setIsCategoryOpen(false)} onTouchStart={() => setIsCategoryOpen(false)} />
+                          <div className="absolute z-40 top-full mt-1 left-0 right-0 max-h-64 overflow-y-auto no-scrollbar bg-[var(--mx-card)] border border-[color:var(--mx-border)] rounded-2xl shadow-lg p-1 animate-[slideDown_0.2s_ease-out]">
+                            {categories.map((cat) => {
+                              const cnt = cat === 'همه' ? cleanProducts.length : cleanProducts.filter((p) => p.category === cat).length;
+                              const on = activeCategory === cat;
+                              return (
+                                <button
+                                  key={cat}
+                                  onClick={() => { setActiveCategory(cat); setIsCategoryOpen(false); }}
+                                  className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[11px] cursor-pointer transition ${on ? 'bg-[#A91D2E] text-white font-bold' : 'hover:bg-[#F6F7F9]'}`}
+                                >
+                                  <span>{cat === 'همه' ? 'همه دسته‌بندی‌ها' : cat}</span>
+                                  <span className={`font-mono text-[10px] ${on ? 'text-white' : 'text-[#6B7280]'}`}>{cnt}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
                     </div>
                     {brands.length > 0 && (
                       <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1 items-center">
@@ -1129,19 +1125,22 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             setSelectedGalleryImage(item.mainImage);
                             setMiniAppView('detail');
                           }}
-                          className={`rounded-[var(--mx-radius)] p-2 cursor-pointer transition flex flex-col justify-between border hover:scale-[1.02] active:scale-95 ${
+                          className={`rounded-[var(--mx-radius)] p-2 cursor-pointer transition flex flex-col justify-between border active:scale-[0.98] shadow-xs ${
                             isDarkMode
                               ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-btn)]'
                               : 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-accent)]'
                           }`}
                         >
                           <div className="space-y-1.5">
-                            <div className="relative aspect-square rounded-[calc(var(--mx-radius)*0.75)] overflow-hidden bg-[var(--mx-card)]">
+                            <div className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-[#EEF1F5]">
                               <img
                                 src={item.mainImage || PLACEHOLDER_IMG}
                                 alt={item.faTitle}
-                                className="w-full h-full object-cover"
+                                className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
                               />
+                              {item.isPostedToTelegram && (
+                                <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-[#A91D2E] text-white rounded-full px-1.5 py-0.5 text-[8px] font-bold"><Send className="w-2.5 h-2.5" />تلگرام</div>
+                              )}
                               <div className="absolute top-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] text-[color:var(--mx-price)] font-bold font-mono">
                                 {item.trendScore}%
                               </div>
@@ -1156,22 +1155,25 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             <div>
                               <div className="text-[9px] opacity-70">قیمت عمده:</div>
                               {previewAsApproved ? (
-                                <div className="text-[11px] font-bold text-[color:var(--mx-ok)] font-mono">
-                                  {displayCurrency === 'TOMAN'
-                                    ? `${lowestToman.toLocaleString('en-US')} ت`
-                                    : displayCurrency === 'USD'
-                                    ? `$${lowestUsd.toFixed(2)}`
-                                    : displayCurrency === 'CNY'
-                                    ? `¥${lowestCny}`
-                                    : `${lowestAed} AED`}
+                                <div>
+                                  <div className="text-[13px] font-black text-[#A91D2E] font-mono">
+                                    {displayCurrency === 'TOMAN'
+                                      ? `${lowestToman.toLocaleString('en-US')} ت`
+                                      : displayCurrency === 'USD'
+                                      ? `$${lowestUsd.toFixed(2)}`
+                                      : displayCurrency === 'CNY'
+                                      ? `¥${lowestCny}`
+                                      : `${lowestAed} AED`}
+                                  </div>
+                                  <div className="text-[9px] text-[#6B7280] font-mono">${lowestUsd.toFixed(2)} · {lowestAed} AED</div>
                                 </div>
                               ) : (
-                                <div className="text-[10px] font-bold text-[color:var(--mx-price)] flex items-center gap-1">
+                                <div className="text-[10px] font-bold text-[#A91D2E] flex items-center gap-1">
                                   <Lock className="w-3 h-3" />
-                                  <span>مخصوص همکار</span>
+                                  <span>قیمت قفل‌شده · مخصوص همکار</span>
                                 </div>
                               )}
-                              <div className="text-[9px] opacity-60">حداقل: {item.moq} عدد</div>
+                              <div className="text-[9px] text-[#6B7280]">حداقل سفارش: {item.moq} عدد{item.brand ? ` · ${item.brand}` : ''}</div>
                             </div>
 
                             <button className="w-full py-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[var(--mx-btn)]/20 hover:bg-[var(--mx-btn)]/30 text-[color:var(--mx-accent)] dark:text-[color:var(--mx-accent)] text-[10px] font-bold flex items-center justify-center gap-1">
@@ -1190,9 +1192,18 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             {/* Telegram WebApp Fixed MainButton at Bottom */}
             <div className={`p-3 border-t ${isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'}`}>
               {miniAppView === 'detail' ? (
+                <div className="flex items-center gap-3">
+                  {previewAsApproved && currentPricing && (
+                    <div className="shrink-0 text-right leading-tight">
+                      <div className="text-[9px] text-[#6B7280]">قیمت واحد · {orderQuantity} عدد</div>
+                      <div className="text-sm font-black text-[#A91D2E] font-mono">
+                        {displayCurrency === 'TOMAN' ? `${currentPricing.unitToman.toLocaleString('en-US')} ت` : displayCurrency === 'USD' ? `$${currentPricing.unitUsd.toFixed(2)}` : displayCurrency === 'CNY' ? `¥${currentPricing.unitCny}` : `${currentPricing.unitAed} AED`}
+                      </div>
+                    </div>
+                  )}
                 <button
                   onClick={handleSendInquiry}
-                  className="nfs-btn-primary w-full py-3.5 rounded-[calc(var(--mx-radius)*0.75)] font-bold text-xs shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
+                  className="nfs-btn-primary flex-1 py-3 rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
                 >
                   {inquirySuccess ? (
                     <>
@@ -1210,6 +1221,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     </>
                   )}
                 </button>
+                </div>
               ) : (
                 <div className="flex items-center justify-between text-xs px-2 py-1 opacity-80">
                   <span className="text-[10px]">روی هر کالا بزنید تا صفحه اختصاصی مشخصات و استعلام باز شود</span>

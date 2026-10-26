@@ -539,10 +539,10 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
 
                         <button
                           onClick={() => onOpenWebStoreSync(product)}
-                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#4A70A9]/20 hover:bg-[#4A70A9]/35 text-[#8FABD4] border border-[#4A70A9]/40 text-xs font-bold transition cursor-pointer"
+                          className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#A91D2E]/20 hover:bg-[#A91D2E]/35 text-[#E0707F] border border-[#A91D2E]/40 text-xs font-bold transition cursor-pointer"
                           title="انتقال اطلاعات سئوشده به صفحه محصول وب‌سایت nafisstore.com"
                         >
-                          <Globe className="w-3.5 h-3.5 text-[#4A70A9]" />
+                          <Globe className="w-3.5 h-3.5 text-[#A91D2E]" />
                           <span>انتقال به سایت</span>
                           {product.isSyncedToWebsite && (
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>

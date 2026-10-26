@@ -115,8 +115,8 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           onClick={() => setActiveAdminSubTab('inquiries')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeAdminSubTab === 'inquiries'
-              ? 'bg-[#4A70A9] text-white shadow-md shadow-[#4A70A9]/30'
-              : 'text-slate-400 hover:text-white bg-[#0B111C]'
+              ? 'bg-[#A91D2E] text-white shadow-md shadow-[#A91D2E]/30'
+              : 'text-slate-400 hover:text-white bg-[#0B0C0E]'
           }`}
         >
           <MessageSquare className="w-4 h-4" />
@@ -127,14 +127,14 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           onClick={() => setActiveAdminSubTab('customers')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeAdminSubTab === 'customers'
-              ? 'bg-[#4A70A9] text-white shadow-md shadow-[#4A70A9]/30'
-              : 'text-slate-400 hover:text-white bg-[#0B111C]'
+              ? 'bg-[#A91D2E] text-white shadow-md shadow-[#A91D2E]/30'
+              : 'text-slate-400 hover:text-white bg-[#0B0C0E]'
           }`}
         >
           <Users className="w-4 h-4" />
           <span>تایید و مدیریت همکاران و مشتریان ({customers.length})</span>
           {pendingCustomers.length > 0 && (
-            <span className="bg-[#4A70A9] text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
+            <span className="bg-[#A91D2E] text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
               {pendingCustomers.length}
             </span>
           )}
@@ -144,8 +144,8 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           onClick={() => setActiveAdminSubTab('currency')}
           className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
             activeAdminSubTab === 'currency'
-              ? 'bg-[#4A70A9] text-white shadow-md shadow-[#4A70A9]/30'
-              : 'text-slate-400 hover:text-white bg-[#0B111C]'
+              ? 'bg-[#A91D2E] text-white shadow-md shadow-[#A91D2E]/30'
+              : 'text-slate-400 hover:text-white bg-[#0B0C0E]'
           }`}
         >
           <TrendingUp className="w-4 h-4" />

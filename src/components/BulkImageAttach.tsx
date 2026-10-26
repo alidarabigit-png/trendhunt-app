@@ -159,7 +159,7 @@ export const BulkImageAttach: React.FC<Props> = ({ adminKey }) => {
     <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3" dir="rtl">
       <div>
         <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-          <ImagePlus className="w-4 h-4 text-[#8FABD4]" />
+          <ImagePlus className="w-4 h-4 text-[#E0707F]" />
           افزودن عکس گروهی به محصولات
         </h3>
         <p className="text-[11px] text-slate-400 mt-1 leading-6">
@@ -169,7 +169,7 @@ export const BulkImageAttach: React.FC<Props> = ({ adminKey }) => {
         </p>
       </div>
 
-      <label className="block border-2 border-dashed border-slate-700 hover:border-[#4A70A9] rounded-xl p-4 text-center cursor-pointer transition">
+      <label className="block border-2 border-dashed border-slate-700 hover:border-[#A91D2E] rounded-xl p-4 text-center cursor-pointer transition">
         <input
           type="file"
           accept="image/jpeg,image/png,image/webp"
@@ -190,7 +190,7 @@ export const BulkImageAttach: React.FC<Props> = ({ adminKey }) => {
             <div key={i} className="flex items-center justify-between gap-3 text-[11px] bg-slate-800/60 rounded-lg px-3 py-1.5">
               <span className="font-mono text-slate-300 truncate" dir="ltr">{e.file.name}</span>
               {e.product ? (
-                <span className="text-[#8FABD4] truncate">{e.product.faTitle}</span>
+                <span className="text-[#E0707F] truncate">{e.product.faTitle}</span>
               ) : (
                 <span className="text-amber-400 shrink-0">محصولی با کد «{e.key}» پیدا نشد</span>
               )}
@@ -212,14 +212,14 @@ export const BulkImageAttach: React.FC<Props> = ({ adminKey }) => {
         <button
           onClick={run}
           disabled={busy || !matched.length}
-          className="px-4 py-2 rounded-xl bg-[#4A70A9] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+          className="px-4 py-2 rounded-xl bg-[#A91D2E] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
         >
           {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
           آپلود و اتصال به محصولات
         </button>
       </div>
       {msg && (
-        <div className={`text-xs rounded-xl px-3 py-2 ${msg.ok ? 'bg-[#4A70A9]/20 text-[#8FABD4]' : 'bg-red-500/10 text-red-400'}`}>
+        <div className={`text-xs rounded-xl px-3 py-2 ${msg.ok ? 'bg-[#A91D2E]/20 text-[#E0707F]' : 'bg-red-500/10 text-red-400'}`}>
           {msg.text}
         </div>
       )}

@@ -153,7 +153,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
       <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
         <div>
           <h2 className="text-sm font-extrabold text-white flex items-center gap-2">
-            <UploadCloud className="w-4 h-4 text-[#8FABD4]" />
+            <UploadCloud className="w-4 h-4 text-[#E0707F]" />
             ورود گروهی محصولات (کاتالوگ برند)
           </h2>
           <p className="text-[11px] text-slate-400 mt-1 leading-6">
@@ -170,7 +170,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
           {copied ? 'کپی شد' : 'کپی دستورالعمل ایجنت (فرمت JSON سازگار با برنامه)'}
         </button>
 
-        <label className="block border-2 border-dashed border-slate-700 hover:border-[#4A70A9] rounded-xl p-5 text-center cursor-pointer transition">
+        <label className="block border-2 border-dashed border-slate-700 hover:border-[#A91D2E] rounded-xl p-5 text-center cursor-pointer transition">
           <input
             type="file"
             accept=".json,application/json,.txt"
@@ -193,7 +193,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
                   {f.error ? (
                     <span className="text-red-400">{f.error}</span>
                   ) : (
-                    <span className="text-[#8FABD4]">{f.items.length} محصول</span>
+                    <span className="text-[#E0707F]">{f.items.length} محصول</span>
                   )}
                   <button
                     onClick={() => {
@@ -295,7 +295,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
           <button
             onClick={() => call(false)}
             disabled={busy || !items.length || (rows !== null && okCount === 0)}
-            className="px-4 py-2 rounded-xl bg-[#4A70A9] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
+            className="px-4 py-2 rounded-xl bg-[#A91D2E] text-white text-xs font-bold flex items-center gap-1.5 disabled:opacity-40 cursor-pointer"
           >
             {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
             ثبت همه در کاتالوگ
@@ -303,7 +303,7 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
         </div>
 
         {msg && (
-          <div className={`text-xs rounded-xl px-3 py-2 ${msg.ok ? 'bg-[#4A70A9]/20 text-[#8FABD4]' : 'bg-red-500/10 text-red-400'}`}>
+          <div className={`text-xs rounded-xl px-3 py-2 ${msg.ok ? 'bg-[#A91D2E]/20 text-[#E0707F]' : 'bg-red-500/10 text-red-400'}`}>
             {msg.text}
           </div>
         )}
@@ -334,9 +334,9 @@ export const BatchImportTab: React.FC<BatchImportTabProps> = ({ adminKey, onImpo
                     {r.status === 'skip' ? (
                       <span className="text-amber-400 flex items-center gap-1"><AlertTriangle className="w-3 h-3" />{r.reason}</span>
                     ) : r.status === 'added' ? (
-                      <span className="text-[#8FABD4]">اضافه شد</span>
+                      <span className="text-[#E0707F]">اضافه شد</span>
                     ) : r.status === 'updated' ? (
-                      <span className="text-[#8FABD4]">به‌روز شد</span>
+                      <span className="text-[#E0707F]">به‌روز شد</span>
                     ) : (
                       <span className="text-slate-300">آماده ثبت</span>
                     )}

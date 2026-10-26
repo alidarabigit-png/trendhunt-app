@@ -61,7 +61,7 @@ export default function App() {
   useEffect(() => {
     fetch('/api.php?action=get_ui')
       .then((r) => r.json())
-      .then((d) => { if (d?.ui && typeof d.ui === 'object' && d.ui.roles) setMiniUi(d.ui as MiniAppUi); })
+      .then((d) => { if (d?.ui && typeof d.ui === 'object' && d.ui.roles && String(d.ui.accent).toUpperCase() !== '#4A70A9') setMiniUi(d.ui as MiniAppUi); })
       .catch(() => {});
   }, []);
   const [user, setUser] = useState<User | null>(null);
@@ -1187,8 +1187,8 @@ export default function App() {
 
 
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-[#4A70A9]/50 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2.5">
-          <span className="w-2 h-2 rounded-full bg-[#4A70A9]"></span>
+        <div className="fixed bottom-6 right-6 z-50 bg-slate-900 border border-[#A91D2E]/50 text-white px-4 py-3 rounded-2xl shadow-2xl text-xs font-semibold flex items-center gap-2.5">
+          <span className="w-2 h-2 rounded-full bg-[#A91D2E]"></span>
           <span>{toastMessage}</span>
         </div>
       )}

@@ -495,7 +495,7 @@ ${tagsText}`;
                   </div>
                 </div>
 
-                <button className="w-full py-2.5 rounded-xl font-bold text-xs bg-[#4A70A9] hover:bg-[#3A5A8A] text-white flex items-center justify-center gap-2 shadow transition">
+                <button className="w-full py-2.5 rounded-xl font-bold text-xs bg-[#A91D2E] hover:bg-[#871523] text-white flex items-center justify-center gap-2 shadow transition">
                   {primaryButtonTarget === 'bot' ? (
                     <>
                       <Bot className="w-4 h-4" />

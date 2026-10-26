@@ -73,6 +73,7 @@ export interface WebStoreConfig {
 
 export interface CurrencyRates {
   usd: number; // دلار آمریکا
+  eur?: number; // یورو (اختیاری)
   aed: number; // درهم امارات
   cny: number; // یوان چین
   lastUpdated: string;
@@ -218,21 +219,21 @@ export const MINIAPP_ROLE_RANGES: Record<MiniAppRoleKey, { size: [number, number
 };
 
 export const DEFAULT_MINIAPP_UI: MiniAppUi = {
-  fontFamily: 'system-ui',
-  accent: '#4A70A9',
-  pageBg: '#EFECE3',
-  cardBg: '#F8F6F1',
-  cardBorder: '#C9D6EA',
-  textColor: '#000000',
-  mutedColor: '#4A70A9',
-  buttonBg: '#4A70A9',
+  fontFamily: 'Vazirmatn',
+  accent: '#A91D2E',
+  pageBg: '#F6F7F9',
+  cardBg: '#FFFFFF',
+  cardBorder: '#E3E6EC',
+  textColor: '#0F1115',
+  mutedColor: '#6B7280',
+  buttonBg: '#A91D2E',
   buttonText: '#FFFFFF',
   radius: 14,
   roles: {
-    heading: { size: 15, weight: 800, color: '#000000', lineHeight: 1.6 },
-    body: { size: 13, weight: 400, color: '#1B2430', lineHeight: 1.9 },
-    small: { size: 12, weight: 400, color: '#4A70A9', lineHeight: 1.8 },
-    price: { size: 16, weight: 800, color: '#4A70A9', lineHeight: 1.4 },
+    heading: { size: 15, weight: 800, color: '#0F1115', lineHeight: 1.6 },
+    body: { size: 13, weight: 400, color: '#0F1115', lineHeight: 1.9 },
+    small: { size: 12, weight: 400, color: '#6B7280', lineHeight: 1.8 },
+    price: { size: 16, weight: 800, color: '#A91D2E', lineHeight: 1.4 },
     button: { size: 13, weight: 700, color: '#FFFFFF', lineHeight: 1.4 },
   },
 };

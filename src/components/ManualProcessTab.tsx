@@ -228,7 +228,7 @@ export const ManualProcessTab: React.FC = () => {
             }
             setAdminKey(k);
           }}
-          className="w-full py-2.5 rounded-xl bg-[#4A70A9] text-white text-xs font-bold cursor-pointer"
+          className="w-full py-2.5 rounded-xl bg-[#A91D2E] text-white text-xs font-bold cursor-pointer"
         >
           ورود
         </button>
@@ -296,7 +296,7 @@ export const ManualProcessTab: React.FC = () => {
                 }}
                 className={`w-full text-right p-3 rounded-xl border text-xs transition cursor-pointer ${
                   selected?.id === r.id
-                    ? 'bg-slate-800 border-[#4A70A9]'
+                    ? 'bg-slate-800 border-[#A91D2E]'
                     : 'bg-slate-900 border-slate-800 hover:border-slate-600'
                 }`}
               >
@@ -407,7 +407,7 @@ export const ManualProcessTab: React.FC = () => {
                   <button
                     onClick={handlePublish}
                     disabled={publishing || !agentJson.trim() || !selected}
-                    className="flex-1 min-w-[180px] py-2.5 rounded-xl bg-[#4A70A9] hover:bg-[#3A5A8A] text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    className="flex-1 min-w-[180px] py-2.5 rounded-xl bg-[#A91D2E] hover:bg-[#871523] text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                   >
                     {publishing ? (
                       <RefreshCw className="w-4 h-4 animate-spin" />
