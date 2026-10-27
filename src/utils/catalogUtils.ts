@@ -165,3 +165,29 @@ export function deduplicateProducts(items: ProductItem[]): ProductItem[] {
 
   return unique;
 }
+
+const BRAND_ALIASES: Record<string, string> = {
+  'انکر': 'anker', 'یوفی': 'eufy', 'نبولا': 'nebula', 'پرودو': 'porodo', 'پرودوبلو': 'porodo',
+};
+
+/** کلید یکتای برند: بدون حساسیت به حروف/فاصله و با معادل فارسی (PorodoBlue = Porodo Blue = پرودو) */
+export function brandKey(brand?: string): string {
+  let k = (brand || '').toLowerCase().replace(/[\s\-_.‌]+/g, '');
+  if (BRAND_ALIASES[k]) k = BRAND_ALIASES[k];
+  k = k.replace(/blue$/, '');
+  return BRAND_ALIASES[k] || k;
+}
+
+/** فهرست برندهای یکتا با نام نمایشی (ترجیحاً لاتین) */
+export function uniqueBrands(products: { brand?: string }[]): { key: string; label: string }[] {
+  const map = new Map<string, string>();
+  for (const p of products) {
+    const raw = (p.brand || '').trim();
+    if (!raw) continue;
+    const k = brandKey(raw);
+    if (!k) continue;
+    const cur = map.get(k);
+    if (!cur || (/[a-z]/i.test(raw) && !/[a-z]/i.test(cur))) map.set(k, raw);
+  }
+  return Array.from(map, ([key, label]) => ({ key, label }));
+}

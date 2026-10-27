@@ -35,7 +35,7 @@ import {
 import { ProductItem, CustomerUser, CurrencyRates, MiniAppNotification, CustomerInquiry, MiniAppUi, DEFAULT_MINIAPP_UI } from '../types';
 import { NfsLogo } from './NfsLogo';
 import { RateBar } from './RateBar';
-import { deduplicateProducts } from '../utils/catalogUtils';
+import { brandKey, uniqueBrands, deduplicateProducts } from '../utils/catalogUtils';
 
 interface TelegramMiniAppPreviewProps {
   products: ProductItem[];
@@ -168,12 +168,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
   const categories = ['همه', ...Array.from(new Set(cleanProducts.map((p) => p.category)))];
 
-  const brands = Array.from(new Set(cleanProducts.map((p) => (p.brand || '').trim()).filter(Boolean)));
+  const brands = uniqueBrands(cleanProducts);
 
   const filtered = cleanProducts.filter(
     (p) =>
       (activeCategory === 'همه' || p.category === activeCategory) &&
-      (activeBrand === 'همه' || (p.brand || '').trim() === activeBrand)
+      (activeBrand === 'همه' || brandKey(p.brand) === activeBrand)
   );
 
   // Calculate tiered price based on slider quantity safely
@@ -563,7 +563,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   <button
                     onClick={() => {
                       setIsMiniAppDrawerOpen(false);
-                      if (sessionStorage.getItem('nfs_admin_auth') === 'true') {
+                      if ((sessionStorage.getItem('nfs_admin_auth') === 'true' && !!sessionStorage.getItem('nfs_admin_key'))) {
                         onSwitchToAdmin();
                       } else {
                         setIsAdminPinModalOpen(true);
@@ -1074,7 +1074,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               return (
                                 <button
                                   key={cat}
-                                  onClick={() => { setActiveCategory(cat); setIsCategoryOpen(false); }}
+                                  onClick={() => { setActiveCategory(cat); setActiveBrand('همه'); setIsCategoryOpen(false); }}
                                   className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[11px] cursor-pointer transition ${on ? 'bg-[#A91D2E] text-white font-bold' : 'hover:bg-[#F6F7F9]'}`}
                                 >
                                   <span>{cat === 'همه' ? 'همه دسته‌بندی‌ها' : cat}</span>
@@ -1089,19 +1089,19 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     {brands.length > 0 && (
                       <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1 items-center">
                         <span className="text-[10px] text-[color:var(--mx-muted)] shrink-0">برند:</span>
-                        {['همه', ...brands].map((b) => (
+                        {[{ key: 'همه', label: 'همه' }, ...brands].map((bo) => { const b = bo.key; return (
                           <button
                             key={b}
-                            onClick={() => setActiveBrand(b)}
+                            onClick={() => { setActiveBrand(b); setActiveCategory('همه'); setIsCategoryOpen(false); }}
                             className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer border ${
                               activeBrand === b
                                 ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] border-[color:var(--mx-btn)] font-bold'
                                 : 'bg-transparent text-[color:var(--mx-body)] border-[color:var(--mx-border)]'
                             }`}
                           >
-                            {b}
+                            {bo.label}
                           </button>
-                        ))}
+                        ); })}
                       </div>
                     )}
                   </div>
@@ -1255,20 +1255,32 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
           </div>
 
           <p className="text-xs text-[color:var(--mx-muted)] leading-relaxed">
-            این بخش ویژه مدیریت بازرگانی نفیس‌استور است. لطفاً رمز عبور مدیریت را وارد کنید:
+            این بخش ویژه مدیریت بازرگانی نفیس‌استور است. برای ورود، فقط کلید ادمین را یک بار وارد کنید:
           </p>
 
           <form
-            onSubmit={(e) => {
+            onSubmit={async (e) => {
               e.preventDefault();
-              const pin = adminPinInput.trim();
-              if (pin === 'nfs2026' || pin === '1234' || pin === 'admin') {
-                sessionStorage.setItem('nfs_admin_auth', 'true');
-                setIsAdminPinModalOpen(false);
-                if (onSwitchToAdmin) onSwitchToAdmin();
-              } else {
-                setAdminPinError('رمز عبور مدیریت اشتباه است. (رمز پیش‌فرض: nfs2026)');
+              const key = adminPinInput.trim();
+              if (!key) return;
+              setAdminPinError('در حال بررسی…');
+              try {
+                const res = await fetch('/api.php?action=get_products_admin', { headers: { 'X-Admin-Key': key } });
+                if (!res.ok) {
+                  setAdminPinError('کلید ادمین اشتباه است.');
+                  return;
+                }
+              } catch {
+                setAdminPinError('ارتباط با سرور برقرار نشد.');
+                return;
               }
+              try {
+                sessionStorage.setItem('nfs_admin_key', key);
+                sessionStorage.setItem('nfs_admin_auth', 'true');
+              } catch { /* ignore */ }
+              setAdminPinError('');
+              setIsAdminPinModalOpen(false);
+              if (onSwitchToAdmin) onSwitchToAdmin();
             }}
             className="space-y-3"
           >
@@ -1276,7 +1288,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               <input
                 type="password"
                 autoFocus
-                placeholder="رمز عبور مدیریت (پیش‌فرض: nfs2026)"
+                placeholder="کلید ادمین"
                 value={adminPinInput}
                 onChange={(e) => {
                   setAdminPinInput(e.target.value);
@@ -1324,7 +1336,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
           {onSwitchToAdmin && (
             <button
               onClick={() => {
-                if (sessionStorage.getItem('nfs_admin_auth') === 'true') {
+                if ((sessionStorage.getItem('nfs_admin_auth') === 'true' && !!sessionStorage.getItem('nfs_admin_key'))) {
                   onSwitchToAdmin();
                 } else {
                   setIsAdminPinModalOpen(true);

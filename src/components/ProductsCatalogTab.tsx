@@ -1,3 +1,4 @@
+import { brandKey, uniqueBrands } from '../utils/catalogUtils';
 import React, { useState } from 'react';
 import { CategoryBrandEditor, NormalizeCategoriesButton } from './CategoryBrandEditor';
 import {
@@ -175,7 +176,7 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
       p.tags.some((t) => t.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesCat = selectedCategory === 'همه' || p.category === selectedCategory;
-    const matchesBrand = selectedBrand === 'همه' || (p.brand || '').trim() === selectedBrand;
+    const matchesBrand = selectedBrand === 'همه' || brandKey(p.brand) === selectedBrand;
     return matchesSearch && matchesCat && matchesBrand;
   });
 
@@ -953,10 +954,10 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
               </button>
             </div>
           </div>
-          {Array.from(new Set(products.map((p) => (p.brand || '').trim()).filter(Boolean))).length > 0 && (
+          {uniqueBrands(products).length > 0 && (
             <div className="flex items-center gap-2 overflow-x-auto pt-2 no-scrollbar">
               <span className="text-[11px] text-slate-400 shrink-0">برند:</span>
-              {['همه', ...Array.from(new Set(products.map((p) => (p.brand || '').trim()).filter(Boolean)))].map((b) => (
+              {[{ key: 'همه', label: 'همه' }, ...uniqueBrands(products)].map((bo) => { const b = bo.key; return (
                 <button
                   key={b}
                   onClick={() => setSelectedBrand(b)}
@@ -966,9 +967,9 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
                       : 'bg-slate-800/90 text-slate-300 border-slate-700/60 hover:bg-slate-700'
                   }`}
                 >
-                  {b}
+                  {bo.label}
                 </button>
-              ))}
+              ); })}
             </div>
           )}
         </div>
