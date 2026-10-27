@@ -243,7 +243,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
     >
             {/* Telegram Header Bar */}
             <div
-              className="px-3.5 pt-8 pb-3 border-b-[3px] border-[#A91D2E] flex items-center justify-between z-20 bg-[#0B0C0E] text-white" 
+              className="mx-header px-3.5 pt-8 pb-3 border-b-[3px] border-[#A91D2E] flex items-center justify-between z-20 bg-[#0B0C0E] text-white"
             >
               {miniAppView === 'detail' ? (
                 <div className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 </button>
 
                 {previewAsApproved ? (
-                  <span className="text-[9px] bg-[color-mix(in_srgb,var(--mx-ok)_20%,transparent)] text-[color:var(--mx-ok)] border border-[color:color-mix(in_srgb,var(--mx-ok)_30%,transparent)] px-2 py-0.5 rounded-full font-bold">
+                  <span className="text-[9px] bg-[#E7F6EC] text-[#166534] border border-[#BBE5C8] px-2 py-0.5 rounded-full font-bold">
                     همکار تایید شده
                   </span>
                 ) : (
@@ -748,7 +748,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         alt={currentProduct.faTitle}
                         className="w-full h-full object-cover transition duration-300"
                       />
-                      <div className="absolute top-2 right-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-[calc(var(--mx-radius)*0.55)] text-[10px] text-[color:var(--mx-price)] font-bold font-mono border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)]">
+                      <div className="absolute top-2 right-2 bg-[#0F1115]/85 px-2 py-0.5 rounded-[calc(var(--mx-radius)*0.55)] text-[10px] text-white font-bold font-mono">
                         ترند {currentProduct.trendScore}%
                       </div>
                       <div className="absolute bottom-2 left-2 bg-black/75 backdrop-blur-md px-2 py-0.5 rounded-[calc(var(--mx-radius)*0.55)] text-[9px] text-[color:var(--mx-body)]">
@@ -779,12 +779,19 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   {/* Product Titles & Sourcing Badges */}
                   <div className="space-y-1.5">
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-accent)_20%,transparent)] text-[color:var(--mx-accent)] border border-[color:color-mix(in_srgb,var(--mx-accent)_30%,transparent)]">
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#0F1115] text-white">
                         {currentProduct.category}
                       </span>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-price)_20%,transparent)] text-[color:var(--mx-price)] border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)] font-mono">
-                        {currentProduct.supplier.platform}
-                      </span>
+                      {currentProduct.brand && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white text-[#0F1115] border border-[#E3E6EC]">
+                          {currentProduct.brand}
+                        </span>
+                      )}
+                      {currentProduct.supplier?.platform && (
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white text-[#6B7280] border border-[#E3E6EC] font-mono">
+                          {currentProduct.supplier.platform}
+                        </span>
+                      )}
                       {currentProduct.supplier.hasTradeAssurance && (
                         <span className="text-[9px] font-semibold px-2 py-0.5 rounded-md bg-[color-mix(in_srgb,var(--mx-ok)_20%,transparent)] text-[color:var(--mx-ok)] border border-[color:color-mix(in_srgb,var(--mx-ok)_30%,transparent)] flex items-center gap-1">
                           <ShieldCheck className="w-3 h-3" />
@@ -843,14 +850,14 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                             key={idx}
                             className={`p-2 rounded-[calc(var(--mx-radius)*0.75)] border text-[10px] space-y-0.5 ${
                               orderQuantity >= tier.minQuantity && (!tier.maxQuantity || orderQuantity <= tier.maxQuantity)
-                                ? 'bg-[var(--mx-btn)]/20 border-[color:var(--mx-btn)] font-bold text-[color:var(--mx-accent)]'
-                                : 'bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border-[color:var(--mx-border)] opacity-80'
+                                ? 'bg-[#A91D2E] border-[#A91D2E] font-bold text-white'
+                                : 'bg-white border-[#E3E6EC] text-[#0F1115]'
                             }`}
                           >
                             <div className="opacity-70 text-[9px]">
                               {tier.maxQuantity ? `${tier.minQuantity}-${tier.maxQuantity} عدد` : `+${tier.minQuantity} عدد`}
                             </div>
-                            <div className="font-extrabold text-[11px] font-mono text-[color:var(--mx-ok)]">
+                            <div className="font-extrabold text-[11px] font-mono">
                               {displayCurrency === 'TOMAN'
                                 ? `${(tier.calculatedPriceToman || 0).toLocaleString('en-US')}`
                                 : displayCurrency === 'USD'
@@ -1141,7 +1148,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               {item.isPostedToTelegram && (
                                 <div className="absolute top-1 left-1 flex items-center gap-0.5 bg-[#A91D2E] text-white rounded-full px-1.5 py-0.5 text-[8px] font-bold"><Send className="w-2.5 h-2.5" />تلگرام</div>
                               )}
-                              <div className="absolute top-1 right-1 bg-black/70 backdrop-blur-sm px-1.5 py-0.5 rounded text-[9px] text-[color:var(--mx-price)] font-bold font-mono">
+                              <div className="absolute top-1 right-1 bg-[#0F1115]/85 px-1.5 py-0.5 rounded text-[9px] text-white font-bold font-mono">
                                 {item.trendScore}%
                               </div>
                             </div>
@@ -1176,7 +1183,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               <div className="text-[9px] text-[#6B7280]">حداقل سفارش: {item.moq} عدد{item.brand ? ` · ${item.brand}` : ''}</div>
                             </div>
 
-                            <button className="w-full py-1 rounded-[calc(var(--mx-radius)*0.55)] bg-[var(--mx-btn)]/20 hover:bg-[var(--mx-btn)]/30 text-[color:var(--mx-accent)] dark:text-[color:var(--mx-accent)] text-[10px] font-bold flex items-center justify-center gap-1">
+                            <button className="w-full py-1.5 rounded-xl bg-[#A91D2E] hover:bg-[#871523] text-white text-[10px] font-bold flex items-center justify-center gap-1 transition">
                               <span>مشاهده و استعلام</span>
                               <ChevronLeft className="w-3 h-3" />
                             </button>

@@ -593,3 +593,8 @@ html:not(.light) .text-slate-700 {
 }
 
 .text-justify-fa { text-align: justify; text-align-last: right; }
+
+/* هدر مینی‌اپ همیشه تیره می‌ماند (مستقل از تم روشن پنل) */
+html.light .mx-header { background-color: #0B0C0E !important; color: #FFFFFF !important; }
+html.light .mx-header .text-white { color: #FFFFFF !important; }
+html.light .mx-header .text-\[\#0F1115\] { color: #FFFFFF !important; }
