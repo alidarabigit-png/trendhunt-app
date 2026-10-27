@@ -75,6 +75,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   const [activeCategory, setActiveCategory] = useState('همه');
   const [activeBrand, setActiveBrand] = useState('همه');
   const [isCategoryOpen, setIsCategoryOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeSub, setActiveSub] = useState('همه');
   const isDarkMode = true;
   const [isMiniAppDrawerOpen, setIsMiniAppDrawerOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
@@ -170,10 +172,14 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
   const brands = uniqueBrands(cleanProducts);
 
+  const subCats = activeCategory === 'همه' ? [] : Array.from(new Set(cleanProducts.filter((p) => p.category === activeCategory).map((p) => (p.subCategory || '').trim()).filter(Boolean)));
+
   const filtered = cleanProducts.filter(
     (p) =>
       (activeCategory === 'همه' || p.category === activeCategory) &&
-      (activeBrand === 'همه' || brandKey(p.brand) === activeBrand)
+      (activeBrand === 'همه' || brandKey(p.brand) === activeBrand) &&
+      (activeSub === 'همه' || (p.subCategory || '').trim() === activeSub) &&
+      (!searchTerm.trim() || [p.faTitle, p.originalTitle, p.modelOrSku, p.brand, p.subCategory, ...(p.tags || [])].join(' ').toLowerCase().includes(searchTerm.trim().toLowerCase()))
   );
 
   // Calculate tiered price based on slider quantity safely
@@ -739,14 +745,15 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             <div className="flex-1 overflow-y-auto no-scrollbar p-3 space-y-3">
               {miniAppView === 'detail' && currentProduct ? (
                 /* Dedicated Full Product Detail Page inside Mini App */
-                <div className="space-y-3 pb-2 animate-fadeIn">
+                <div key={currentProduct.id} className="space-y-3 pb-2 mx-page-in">
                   {/* Large Image Gallery & Switcher */}
                   <div className="space-y-2">
                     <div className="relative aspect-square w-full rounded-[var(--mx-radius)] overflow-hidden bg-[var(--mx-card)] border border-[color:var(--mx-border)] shadow-md">
                       <img
                         src={selectedGalleryImage || currentProduct.mainImage || PLACEHOLDER_IMG}
                         alt={currentProduct.faTitle}
-                        className="w-full h-full object-cover transition duration-300"
+                        key={selectedGalleryImage || currentProduct.mainImage}
+                        className="w-full h-full object-cover mx-img-in"
                       />
                       <div className="absolute top-2 right-2 bg-[#0F1115]/85 px-2 py-0.5 rounded-[calc(var(--mx-radius)*0.55)] text-[10px] text-white font-bold font-mono">
                         ترند {currentProduct.trendScore}%
@@ -847,8 +854,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       <div className="grid grid-cols-3 gap-1.5 text-center">
                         {currentProduct.tieredPricing.map((tier, idx) => (
                           <div
-                            key={idx}
-                            className={`p-2 rounded-[calc(var(--mx-radius)*0.75)] border text-[10px] space-y-0.5 ${
+                            key={`${idx}-${orderQuantity >= tier.minQuantity && (!tier.maxQuantity || orderQuantity <= tier.maxQuantity)}`}
+                            className={`p-2 rounded-[calc(var(--mx-radius)*0.75)] border text-[10px] space-y-0.5 transition ${orderQuantity >= tier.minQuantity && (!tier.maxQuantity || orderQuantity <= tier.maxQuantity) ? 'mx-pop' : ''} 
                               orderQuantity >= tier.minQuantity && (!tier.maxQuantity || orderQuantity <= tier.maxQuantity)
                                 ? 'bg-[#A91D2E] border-[#A91D2E] font-bold text-white'
                                 : 'bg-white border-[#E3E6EC] text-[#0F1115]'
@@ -1002,7 +1009,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                 </div>
               ) : (
                 /* Catalog Feed Grid View */
-                <div className="space-y-3">
+                <div className="space-y-3 mx-page-back">
                   {/* Gatekeeping notice if unapproved */}
                   {!previewAsApproved && (
                     <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[color-mix(in_srgb,var(--mx-price)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)] text-[10px] text-[color:var(--mx-price)] space-y-1">
@@ -1059,6 +1066,15 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       )}
                     </div>
 
+                    <div className="relative">
+                      <Search className="w-3.5 h-3.5 absolute right-3 top-1/2 -translate-y-1/2 text-[#6B7280]" />
+                      <input
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        placeholder="جستجوی نام، مدل یا کد کالا…"
+                        className="w-full bg-[var(--mx-card)] border border-[color:var(--mx-border)] rounded-xl pr-9 pl-3 py-2 text-xs focus:outline-none focus:border-[#A91D2E] transition"
+                      />
+                    </div>
                     {/* منوی کشویی دسته‌بندی */}
                     <div className="relative">
                       <button
@@ -1081,7 +1097,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               return (
                                 <button
                                   key={cat}
-                                  onClick={() => { setActiveCategory(cat); setActiveBrand('همه'); setIsCategoryOpen(false); }}
+                                  onClick={() => { setActiveCategory(cat); setActiveBrand('همه'); setActiveSub('همه'); setIsCategoryOpen(false); }}
                                   className={`w-full flex items-center justify-between px-2.5 py-2 rounded-xl text-[11px] cursor-pointer transition ${on ? 'bg-[#A91D2E] text-white font-bold' : 'hover:bg-[#F6F7F9]'}`}
                                 >
                                   <span>{cat === 'همه' ? 'همه دسته‌بندی‌ها' : cat}</span>
@@ -1093,13 +1109,26 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                         </>
                       )}
                     </div>
+                    {subCats.length > 0 && (
+                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-0.5 items-center">
+                        {['همه', ...subCats].map((sc) => (
+                          <button
+                            key={sc}
+                            onClick={() => setActiveSub(sc)}
+                            className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer border ${activeSub === sc ? 'bg-[#0F1115] text-white border-[#0F1115] font-bold' : 'bg-white text-[#0F1115] border-[#E3E6EC]'}`}
+                          >
+                            {sc === 'همه' ? 'همه زیردسته‌ها' : sc}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                     {brands.length > 0 && (
                       <div className="flex gap-1.5 overflow-x-auto no-scrollbar py-1 items-center">
                         <span className="text-[10px] text-[color:var(--mx-muted)] shrink-0">برند:</span>
                         {[{ key: 'همه', label: 'همه' }, ...brands].map((bo) => { const b = bo.key; return (
                           <button
                             key={b}
-                            onClick={() => { setActiveBrand(b); setActiveCategory('همه'); setIsCategoryOpen(false); }}
+                            onClick={() => { setActiveBrand(b); setActiveCategory('همه'); setActiveSub('همه'); setIsCategoryOpen(false); }}
                             className={`text-[10px] px-2.5 py-1 rounded-full whitespace-nowrap transition cursor-pointer border ${
                               activeBrand === b
                                 ? 'bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] border-[color:var(--mx-btn)] font-bold'
@@ -1115,7 +1144,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
                   {/* Products Feed inside Mini App */}
                   <div className="grid grid-cols-2 gap-2.5">
-                    {filtered.map((item) => {
+                    {filtered.map((item, cardIdx) => {
                       const tiers = item.tieredPricing || [];
                       const lastTier = tiers.length > 0 ? tiers[tiers.length - 1] : null;
                       const lowestToman = lastTier?.calculatedPriceToman || Math.round((item.costPerUnitUsd || 10) * (currencyRates?.usd || 95000) * 1.3);
@@ -1126,13 +1155,14 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                       return (
                         <div
                           key={item.id}
+                          style={{ animationDelay: `${Math.min(cardIdx, 12) * 45}ms` }}
                           onClick={() => {
                             setActiveProductModal(item);
                             setOrderQuantity(item.moq);
                             setSelectedGalleryImage(item.mainImage);
                             setMiniAppView('detail');
                           }}
-                          className={`rounded-[var(--mx-radius)] p-2 cursor-pointer transition flex flex-col justify-between border active:scale-[0.98] shadow-xs ${
+                          className={`mx-card-in rounded-[var(--mx-radius)] p-2 cursor-pointer transition flex flex-col justify-between border active:scale-[0.98] hover:-translate-y-0.5 hover:shadow-md shadow-xs ${
                             isDarkMode
                               ? 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-btn)]'
                               : 'bg-[var(--mx-card)] border-[color:var(--mx-border)] hover:border-[color:var(--mx-accent)]'
@@ -1197,7 +1227,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             </div>
 
             {/* Telegram WebApp Fixed MainButton at Bottom */}
-            <div className={`p-3 border-t ${isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'}`}>
+            <div key={miniAppView} className={`${miniAppView === 'detail' ? 'mx-bar-up' : ''} p-3 border-t ${isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'}`}>
               {miniAppView === 'detail' ? (
                 <div className="flex items-center gap-3">
                   {previewAsApproved && currentPricing && (

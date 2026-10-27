@@ -598,3 +598,20 @@ html:not(.light) .text-slate-700 {
 html.light .mx-header { background-color: #0B0C0E !important; color: #FFFFFF !important; }
 html.light .mx-header .text-white { color: #FFFFFF !important; }
 html.light .mx-header .text-\[\#0F1115\] { color: #FFFFFF !important; }
+
+/* ---------- حرکت‌های مینی‌اپ ---------- */
+@keyframes mxFadeUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes mxPageIn { from { opacity: 0; transform: translateX(-24px) scale(0.985); } to { opacity: 1; transform: translateX(0) scale(1); } }
+@keyframes mxPageBack { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes mxPop { 0% { transform: scale(0.94); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes mxBarUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes mxImgIn { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
+.mx-card-in { opacity: 0; animation: mxFadeUp 0.45s cubic-bezier(.2,.7,.2,1) forwards; }
+.mx-page-in { animation: mxPageIn 0.35s cubic-bezier(.2,.7,.2,1) both; }
+.mx-page-back { animation: mxPageBack 0.3s cubic-bezier(.2,.7,.2,1) both; }
+.mx-pop { animation: mxPop 0.28s ease-out; }
+.mx-bar-up { animation: mxBarUp 0.35s cubic-bezier(.2,.7,.2,1) both; }
+.mx-img-in { animation: mxImgIn 0.4s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .mx-card-in, .mx-page-in, .mx-page-back, .mx-pop, .mx-bar-up, .mx-img-in { animation: none !important; opacity: 1 !important; }
+}

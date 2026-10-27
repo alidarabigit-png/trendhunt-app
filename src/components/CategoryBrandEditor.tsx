@@ -198,3 +198,33 @@ export const NormalizeCategoriesButton: React.FC = () => {
     </>
   );
 };
+
+
+/** دانلود پشتیبان کامل کاتالوگ به‌صورت فایل JSON */
+export const BackupCatalogButton: React.FC = () => {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    const key = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('nfs_admin_key') : null;
+    if (!key) { alert('ابتدا کلید ادمین را وارد کنید.'); return; }
+    setBusy(true);
+    try {
+      const res = await fetch('/api.php?action=backup_catalog', { headers: { 'X-Admin-Key': key } });
+      const d = await res.json();
+      if (!res.ok || !d.success) throw new Error(d.error || 'خطا');
+      const blob = new Blob([JSON.stringify(d.products, null, 1)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `nfs-catalog-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e: any) {
+      alert('دریافت پشتیبان ناموفق بود: ' + (e?.message || ''));
+    }
+    setBusy(false);
+  };
+  return (
+    <button onClick={run} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 cursor-pointer disabled:opacity-50">
+      {busy ? 'در حال دریافت…' : 'دانلود پشتیبان کاتالوگ'}
+    </button>
+  );
+};

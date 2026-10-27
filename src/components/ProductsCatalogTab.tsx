@@ -1,6 +1,6 @@
 import { brandKey, uniqueBrands } from '../utils/catalogUtils';
 import React, { useState } from 'react';
-import { CategoryBrandEditor, NormalizeCategoriesButton } from './CategoryBrandEditor';
+import { CategoryBrandEditor, NormalizeCategoriesButton, BackupCatalogButton } from './CategoryBrandEditor';
 import {
   Package,
   Search,
@@ -211,6 +211,7 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
           <div className="flex flex-wrap items-center gap-2">
 
             <NormalizeCategoriesButton />
+            <BackupCatalogButton />
 
             <button
               onClick={() => exportProductsToCSV(products)}

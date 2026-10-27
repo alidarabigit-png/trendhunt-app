@@ -2204,11 +2204,17 @@ $adminActions = [
     'get_products_admin', 'save_products', 'upload_image', 'cache_catalog_images',
     'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
-    'channel_post_pending', 'ingest_batch', 'normalize_catalog', 'attach_images',
+    'channel_post_pending', 'ingest_batch', 'normalize_catalog', 'attach_images', 'backup_catalog',
     'mark_posted', // FIXED: اکشن mark_posted به لیست ادمین اضافه شد
 ];
 if (in_array($action, $adminActions, true)) {
     require_admin();
+}
+
+/* پشتیبان کامل کاتالوگ (فقط ادمین) */
+if ($action === 'backup_catalog') {
+    $items = read_json($CATALOG_FILE, []);
+    out(['success' => true, 'exportedAt' => date('c'), 'count' => is_array($items) ? count($items) : 0, 'products' => is_array($items) ? $items : []]);
 }
 
 /* ارسال دستی محصولات منتشرنشده در کانال (حداکثر ۵ تا در هر بار) */
