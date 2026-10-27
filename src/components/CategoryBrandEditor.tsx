@@ -228,3 +228,71 @@ export const BackupCatalogButton: React.FC = () => {
     </button>
   );
 };
+
+interface DupGroup { keep: { id: string; title: string }; remove: { id: string; title: string }[] }
+
+/** یافتن و حذف محصولات تکراری با پیش‌نمایش */
+export const DedupeCatalogButton: React.FC = () => {
+  const [busy, setBusy] = useState(false);
+  const [groups, setGroups] = useState<DupGroup[] | null>(null);
+  const call = async (dry: boolean) => {
+    const key = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('nfs_admin_key') : null;
+    if (!key) { alert('ابتدا کلید ادمین را وارد کنید.'); return null; }
+    const res = await fetch('/api.php?action=dedupe_catalog', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Admin-Key': key },
+      body: JSON.stringify({ dry_run: dry }),
+    });
+    const d = await res.json();
+    if (!res.ok || !d.success) throw new Error(d.error || 'خطا');
+    return d;
+  };
+  const preview = async () => {
+    setBusy(true);
+    try {
+      const d = await call(true);
+      if (d) {
+        if (!d.groups.length) alert('محصول تکراری پیدا نشد.');
+        else setGroups(d.groups);
+      }
+    } catch (e: any) { alert('خطا: ' + (e?.message || '')); }
+    setBusy(false);
+  };
+  const apply = async () => {
+    setBusy(true);
+    try {
+      const d = await call(false);
+      if (d) { alert(`${d.removed} محصول تکراری حذف شد.`); window.location.reload(); }
+    } catch (e: any) { alert('خطا: ' + (e?.message || '')); }
+    setBusy(false);
+  };
+  return (
+    <>
+      <button onClick={preview} disabled={busy} className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-bold text-slate-200 cursor-pointer disabled:opacity-50">
+        {busy ? 'در حال بررسی…' : 'حذف محصولات تکراری'}
+      </button>
+      {groups && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70" onClick={() => setGroups(null)}>
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl max-w-xl w-full max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="p-4 border-b border-slate-800 text-sm font-bold text-white">
+              {groups.reduce((n, g) => n + g.remove.length, 0)} محصول تکراری پیدا شد
+              <p className="text-[11px] font-normal text-slate-400 mt-1">از هر گروه، کالای کامل‌تر (دارای عکس / ثبت‌شده با کد) می‌ماند و عکس نسخه‌ی حذف‌شده به آن منتقل می‌شود. از کاتالوگ قبل از حذف نسخه‌ی پشتیبان خودکار ساخته می‌شود.</p>
+            </div>
+            <div className="p-4 overflow-y-auto space-y-3 text-xs">
+              {groups.map((g, i) => (
+                <div key={i} className="rounded-xl border border-slate-800 p-2.5 space-y-1">
+                  <div className="text-emerald-400">✓ می‌ماند: {g.keep.title}</div>
+                  {g.remove.map((r) => <div key={r.id} className="text-red-400">✗ حذف می‌شود: {r.title}</div>)}
+                </div>
+              ))}
+            </div>
+            <div className="p-4 border-t border-slate-800 flex gap-2">
+              <button onClick={apply} disabled={busy} className="flex-1 py-2 rounded-xl bg-[#A91D2E] text-white text-xs font-bold cursor-pointer disabled:opacity-50">{busy ? 'در حال حذف…' : 'حذف تکراری‌ها'}</button>
+              <button onClick={() => setGroups(null)} className="px-4 py-2 rounded-xl bg-slate-800 text-slate-200 text-xs cursor-pointer">انصراف</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};

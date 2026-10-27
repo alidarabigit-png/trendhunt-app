@@ -2069,6 +2069,123 @@ if ($action === 'normalize_catalog' && $method === 'POST') {
     out(['success' => true, 'dry_run' => $dry, 'changed' => count($changes), 'changes' => $changes, 'categories' => catalog_categories()]);
 }
 
+
+/* یافتن و حذف محصولات تکراری (پیش‌نمایش با dry_run، پیش‌فرض) */
+if ($action === 'dedupe_catalog' && $method === 'POST') {
+    require_admin();
+    $dry = !isset($body['dry_run']) || !empty($body['dry_run']);
+    $groups = [];
+    $removedCount = 0;
+    $run = function () use ($CATALOG_FILE, $dry, &$groups, &$removedCount) {
+        $items = read_json($CATALOG_FILE, []);
+        if (!is_array($items)) {
+            return;
+        }
+        $toks = function ($t) {
+            $t = mb_strtolower(str_replace("\u{200c}", ' ', (string)$t), 'UTF-8');
+            preg_match_all('/[a-z0-9\.\-]+|[\x{0600}-\x{06ff}]+/u', $t, $m);
+            return array_values(array_unique($m[0]));
+        };
+        $modelToks = function ($ts) {
+            $o = [];
+            foreach ($ts as $x) {
+                $parts = preg_split('/[\.\-]/', $x);
+                foreach (array_merge([$x], $parts) as $p) {
+                    if (strlen($p) >= 3 && preg_match('/[a-z]/', $p) && preg_match('/\d/', $p)) {
+                        $o[$p] = true;
+                    }
+                }
+            }
+            return array_keys($o);
+        };
+        $score = function ($p) {
+            return count((array)($p['images'] ?? [])) * 2 + (!empty($p['isPostedToTelegram']) ? 3 : 0) + (!empty($p['categoryLocked']) ? 1 : 0) + (strpos((string)($p['externalId'] ?? ''), 'sku:') === 0 ? 20 : 0) + min(3, strlen((string)($p['faFullDesc'] ?? '')) / 400);
+        };
+        $n = count($items);
+        $info = [];
+        foreach ($items as $i => $p) {
+            $ts = is_array($p) ? $toks($p['faTitle'] ?? '') : [];
+            $info[$i] = ['t' => $ts, 'm' => $modelToks($ts), 'sku' => mb_strtolower(trim((string)($p['modelOrSku'] ?? '')), 'UTF-8'), 'brand' => mb_strtolower(trim((string)($p['brand'] ?? '')), 'UTF-8')];
+        }
+        $parent = range(0, max(0, $n - 1));
+        $find = function ($x) use (&$parent, &$find) {
+            while ($parent[$x] !== $x) {
+                $parent[$x] = $parent[$parent[$x]];
+                $x = $parent[$x];
+            }
+            return $x;
+        };
+        for ($i = 0; $i < $n; $i++) {
+            for ($j = $i + 1; $j < $n; $j++) {
+                $a = $items[$i];
+                $b = $items[$j];
+                if (!is_array($a) || !is_array($b)) {
+                    continue;
+                }
+                $dup = false;
+                if (!empty($a['externalId']) && ($a['externalId'] ?? '') === ($b['externalId'] ?? '')) {
+                    $dup = true;
+                } elseif ($info[$i]['sku'] !== '' && $info[$j]['sku'] !== '') {
+                    $dup = $info[$i]['sku'] === $info[$j]['sku'] && $info[$i]['brand'] === $info[$j]['brand'];
+                } else {
+                    $A = $info[$i]['t'];
+                    $B = $info[$j]['t'];
+                    $un = count(array_unique(array_merge($A, $B)));
+                    $jac = $un ? count(array_intersect($A, $B)) / $un : 0;
+                    $common = array_intersect($info[$i]['m'], $info[$j]['m']);
+                    $dup = $jac >= 0.6 || count($common) >= 1 && $jac >= 0.3;
+                }
+                if ($dup) {
+                    $parent[$find($j)] = $find($i);
+                }
+            }
+        }
+        $byRoot = [];
+        for ($i = 0; $i < $n; $i++) {
+            $byRoot[$find($i)][] = $i;
+        }
+        $drop = [];
+        foreach ($byRoot as $idxs) {
+            if (count($idxs) < 2) {
+                continue;
+            }
+            usort($idxs, function ($x, $y) use ($items, $score) {
+                $d = $score($items[$y]) <=> $score($items[$x]);
+                return $d !== 0 ? $d : $x <=> $y;
+            });
+            $keep = array_shift($idxs);
+            $g = ['keep' => ['id' => $items[$keep]['id'] ?? '', 'title' => $items[$keep]['faTitle'] ?? ''], 'remove' => []];
+            foreach ($idxs as $r) {
+                $g['remove'][] = ['id' => $items[$r]['id'] ?? '', 'title' => $items[$r]['faTitle'] ?? ''];
+                $drop[$r] = true;
+                if (!empty($items[$r]['isPostedToTelegram'])) {
+                    $items[$keep]['isPostedToTelegram'] = true;
+                }
+                if (empty($items[$keep]['images']) && !empty($items[$r]['images'])) {
+                    $items[$keep]['images'] = $items[$r]['images'];
+                    $items[$keep]['mainImage'] = $items[$r]['mainImage'] ?? '';
+                }
+            }
+            $groups[] = $g;
+        }
+        $removedCount = count($drop);
+        if (!$dry && $drop) {
+            if (is_file($CATALOG_FILE)) {
+                @copy($CATALOG_FILE, DATA_DIR . '/catalog.bak.json');
+            }
+            $out = [];
+            foreach ($items as $i => $p) {
+                if (!isset($drop[$i])) {
+                    $out[] = $p;
+                }
+            }
+            write_json($CATALOG_FILE, $out);
+        }
+    };
+    with_lock('catalog', $run);
+    out(['success' => true, 'dry_run' => $dry, 'groups' => $groups, 'removed' => $removedCount]);
+}
+
 /* اتصال عکس‌های آپلودشده به محصولات بر اساس کد مدل (modelOrSku) یا id */
 if ($action === 'attach_images' && $method === 'POST') {
     require_admin();
@@ -2204,7 +2321,7 @@ $adminActions = [
     'get_products_admin', 'save_products', 'upload_image', 'cache_catalog_images',
     'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
-    'channel_post_pending', 'ingest_batch', 'normalize_catalog', 'attach_images', 'backup_catalog',
+    'channel_post_pending', 'ingest_batch', 'normalize_catalog', 'attach_images', 'backup_catalog', 'dedupe_catalog',
     'mark_posted', // FIXED: اکشن mark_posted به لیست ادمین اضافه شد
 ];
 if (in_array($action, $adminActions, true)) {

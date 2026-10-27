@@ -1,6 +1,6 @@
 import { brandKey, uniqueBrands } from '../utils/catalogUtils';
 import React, { useState } from 'react';
-import { CategoryBrandEditor, NormalizeCategoriesButton, BackupCatalogButton } from './CategoryBrandEditor';
+import { CategoryBrandEditor, NormalizeCategoriesButton, BackupCatalogButton, DedupeCatalogButton } from './CategoryBrandEditor';
 import {
   Package,
   Search,
@@ -212,6 +212,7 @@ export const ProductsCatalogTab: React.FC<ProductsCatalogTabProps> = ({
 
             <NormalizeCategoriesButton />
             <BackupCatalogButton />
+            <DedupeCatalogButton />
 
             <button
               onClick={() => exportProductsToCSV(products)}
