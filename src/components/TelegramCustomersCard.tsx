@@ -7,6 +7,11 @@ interface TgCustomer {
   phone?: string;
   status: 'approved' | 'pending' | 'rejected';
   createdAt?: string;
+  companyName?: string;
+  activityType?: string;
+  city?: string;
+  address?: string;
+  profileAt?: string;
 }
 
 /** مشتریان واقعی تلگرام: تایید / رد دسترسی به قیمت‌ها (قفل سمت سرور) */
@@ -66,19 +71,27 @@ export const TelegramCustomersCard: React.FC = () => {
       {sorted.length === 0 && !err && <div className="text-xs text-slate-500">هنوز مشتری ثبت نشده.</div>}
       <div className="space-y-2">
         {sorted.map((c) => (
-          <div key={c.telegramUserId} className="flex items-center justify-between gap-2 rounded-xl border border-slate-800 p-2.5">
-            <div className="min-w-0">
-              <div className="text-xs font-bold text-white truncate">{c.name || 'بدون نام'}</div>
+          <div key={c.telegramUserId} className="flex items-start justify-between gap-2 rounded-xl border border-slate-800 p-2.5">
+            <div className="min-w-0 space-y-0.5">
+              <div className="text-xs font-bold text-white">{c.name || 'بدون نام'}{c.companyName ? ' — ' + c.companyName : ''}</div>
               <div className="text-[11px] text-slate-400" dir="ltr">
                 {c.username ? '@' + c.username + ' · ' : ''}
                 {c.telegramUserId}
-                {c.phone ? ' · ' + c.phone : ''}
               </div>
+              {c.profileAt ? (
+                <div className="text-[11px] text-slate-300 leading-relaxed">
+                  <div>📞 {c.phone}</div>
+                  <div>🏷 {c.activityType} · {c.city}</div>
+                  <div>📍 {c.address}</div>
+                </div>
+              ) : (
+                <div className="text-[11px] text-amber-300">مشخصات را هنوز ثبت نکرده</div>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <span className={`text-[11px] font-bold ${color[c.status]}`}>{label[c.status]}</span>
               {c.status !== 'approved' && (
-                <button disabled={busyId === c.telegramUserId} onClick={() => setStatus(c.telegramUserId, 'approved')} className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50">تایید</button>
+                <button disabled={busyId === c.telegramUserId || !c.profileAt} title={c.profileAt ? '' : 'ابتدا باید مشخصات را ثبت کند'} onClick={() => setStatus(c.telegramUserId, 'approved')} className="px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[11px] font-bold cursor-pointer disabled:opacity-50">تایید</button>
               )}
               {c.status !== 'rejected' && (
                 <button disabled={busyId === c.telegramUserId} onClick={() => setStatus(c.telegramUserId, 'rejected')} className="px-2.5 py-1 rounded-lg bg-slate-700 text-white text-[11px] cursor-pointer disabled:opacity-50">رد</button>

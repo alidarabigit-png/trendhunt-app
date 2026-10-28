@@ -1251,18 +1251,17 @@ if ($action === 'my_status') {
     if ($adminChat !== '' && (string)$u['id'] === (string)$adminChat) {
         out(['success' => true, 'status' => 'approved', 'admin' => true]);
     }
-    $isNew = false;
-    $status = with_lock('crm', function () use ($CRM_FILE, $u, &$isNew) {
+    $rec = with_lock('crm', function () use ($CRM_FILE, $u) {
         $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
         if (!isset($crm['customers']) || !is_array($crm['customers'])) {
             $crm['customers'] = [];
         }
         foreach ($crm['customers'] as $c) {
             if (is_array($c) && isset($c['telegramUserId']) && (int)$c['telegramUserId'] === (int)$u['id']) {
-                return isset($c['status']) && in_array($c['status'], ['approved', 'rejected', 'pending'], true) ? $c['status'] : 'pending';
+                return $c;
             }
         }
-        $crm['customers'][] = [
+        $n = [
             'telegramUserId' => (int)$u['id'],
             'name'           => clean(trim((isset($u['first_name']) ? $u['first_name'] : '') . ' ' . (isset($u['last_name']) ? $u['last_name'] : '')), 120),
             'username'       => clean(isset($u['username']) ? $u['username'] : '', 60),
@@ -1270,19 +1269,72 @@ if ($action === 'my_status') {
             'status'         => 'pending',
             'createdAt'      => date('c'),
         ];
+        $crm['customers'][] = $n;
         write_json($CRM_FILE, $crm);
-        $isNew = true;
-        return 'pending';
+        return $n;
     });
-    if ($isNew && $adminChat !== '') {
+    $status = isset($rec['status']) && in_array($rec['status'], ['approved', 'rejected', 'pending'], true) ? $rec['status'] : 'pending';
+    out(['success' => true, 'status' => $status, 'registered' => !empty($rec['profileAt']), 'profile' => [
+        'name' => isset($rec['name']) ? $rec['name'] : '', 'companyName' => isset($rec['companyName']) ? $rec['companyName'] : '',
+        'phone' => isset($rec['phone']) ? $rec['phone'] : '', 'activityType' => isset($rec['activityType']) ? $rec['activityType'] : '',
+        'city' => isset($rec['city']) ? $rec['city'] : '', 'address' => isset($rec['address']) ? $rec['address'] : '',
+    ]]);
+}
+
+/* ثبت مشخصات هویتی توسط متقاضی (برای بررسی و تایید ادمین) */
+if ($action === 'submit_registration' && $method === 'POST') {
+    rate_limit('register', 12, 3600);
+    $u = verify_init_data(request_init_data());
+    if (!$u) {
+        fail('Telegram authentication failed', 401);
+    }
+    $acts = ['فروشگاه اینترنتی', 'فروشگاه حضوری', 'عمده‌فروش / پخش', 'واردکننده', 'تولیدکننده', 'نمایندگی / سازمانی', 'سایر'];
+    $name = clean(isset($body['name']) ? $body['name'] : '', 120);
+    $company = clean(isset($body['companyName']) ? $body['companyName'] : '', 120);
+    $phone = preg_replace('/[^0-9+]/', '', strtr((string)(isset($body['phone']) ? $body['phone'] : ''), ['۰'=>'0','۱'=>'1','۲'=>'2','۳'=>'3','۴'=>'4','۵'=>'5','۶'=>'6','۷'=>'7','۸'=>'8','۹'=>'9','٠'=>'0','١'=>'1','٢'=>'2','٣'=>'3','٤'=>'4','٥'=>'5','٦'=>'6','٧'=>'7','٨'=>'8','٩'=>'9']));
+    $act = clean(isset($body['activityType']) ? $body['activityType'] : '', 60);
+    $city = clean(isset($body['city']) ? $body['city'] : '', 80);
+    $addr = clean(isset($body['address']) ? $body['address'] : '', 400);
+    if (mb_strlen($name, 'UTF-8') < 3) { fail('نام و نام خانوادگی را کامل وارد کنید', 422); }
+    if (strlen(preg_replace('/\D/', '', $phone)) < 10 || strlen($phone) > 15) { fail('شماره تماس معتبر نیست', 422); }
+    if (!in_array($act, $acts, true)) { fail('نوع فعالیت را انتخاب کنید', 422); }
+    if (mb_strlen($city, 'UTF-8') < 2) { fail('شهر را وارد کنید', 422); }
+    if (mb_strlen($addr, 'UTF-8') < 10) { fail('آدرس کامل را وارد کنید', 422); }
+    $res = with_lock('crm', function () use ($CRM_FILE, $u, $name, $company, $phone, $act, $city, $addr) {
+        $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
+        if (!isset($crm['customers']) || !is_array($crm['customers'])) {
+            $crm['customers'] = [];
+        }
+        $idx = -1;
+        foreach ($crm['customers'] as $i => $c) {
+            if (is_array($c) && isset($c['telegramUserId']) && (int)$c['telegramUserId'] === (int)$u['id']) {
+                $idx = $i;
+                break;
+            }
+        }
+        if ($idx < 0) {
+            $crm['customers'][] = ['telegramUserId' => (int)$u['id'], 'username' => clean(isset($u['username']) ? $u['username'] : '', 60), 'createdAt' => date('c'), 'status' => 'pending'];
+            $idx = count($crm['customers']) - 1;
+        }
+        $c = $crm['customers'][$idx];
+        $c['name'] = $name; $c['companyName'] = $company; $c['phone'] = $phone; $c['activityType'] = $act;
+        $c['city'] = $city; $c['address'] = $addr; $c['profileAt'] = date('c');
+        if (!isset($c['status']) || $c['status'] === 'rejected') {
+            $c['status'] = 'pending';
+        }
+        $crm['customers'][$idx] = $c;
+        write_json($CRM_FILE, $crm);
+        return $c['status'];
+    });
+    $adminChat = secret('admin_chat_id');
+    if ($adminChat !== '') {
         tg_call('sendMessage', [
             'chat_id' => $adminChat,
-            'text' => "👤 درخواست دسترسی جدید به قیمت‌ها\n" . clean(trim((isset($u['first_name']) ? $u['first_name'] : '') . ' ' . (isset($u['last_name']) ? $u['last_name'] : '')), 120)
-                . (!empty($u['username']) ? ' (@' . $u['username'] . ')' : '') . "\nشناسه: " . $u['id']
-                . "\nبرای تایید: پنل ادمین ← مشتریان تلگرام",
+            'text' => "👤 درخواست احراز هویت جدید\nنام: $name" . ($company !== '' ? "\nشرکت/فروشگاه: $company" : '') . "\nتلفن: $phone\nفعالیت: $act\nشهر: $city\nآدرس: $addr"
+                . (!empty($u['username']) ? "\nتلگرام: @" . $u['username'] : '') . "\nبرای تایید: پنل ادمین ← مشتریان تلگرام",
         ]);
     }
-    out(['success' => true, 'status' => $status]);
+    out(['success' => true, 'status' => $res]);
 }
 
 /* مدیریت مشتریان (ادمین) */

@@ -34,6 +34,7 @@ import {
 } from 'lucide-react';
 import { ProductItem, CustomerUser, CurrencyRates, MiniAppNotification, CustomerInquiry, MiniAppUi, DEFAULT_MINIAPP_UI } from '../types';
 import { NfsLogo } from './NfsLogo';
+import { RegistrationGate } from './RegistrationGate';
 import { RateBar } from './RateBar';
 import { brandKey, uniqueBrands, deduplicateProducts } from '../utils/catalogUtils';
 
@@ -1015,18 +1016,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               ) : (
                 /* Catalog Feed Grid View */
                 <div className="space-y-3 mx-page-back">
-                  {/* Gatekeeping notice if unapproved */}
-                  {!previewAsApproved && (
-                    <div className="p-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[color-mix(in_srgb,var(--mx-price)_10%,transparent)] border border-[color:color-mix(in_srgb,var(--mx-price)_30%,transparent)] text-[10px] text-[color:var(--mx-price)] space-y-1">
-                      <div className="font-bold flex items-center gap-1">
-                        <Lock className="w-3 h-3 text-[color:var(--mx-price)] shrink-0" />
-                        <span>قیمت‌های عمده اختصاصی همکاران تایید شده است</span>
-                      </div>
-                      <p className="opacity-80 leading-relaxed">
-                        جهت جلوگیری از افشای حاشیه سود شما، قیمت‌ها برای عموم قفل است. با تایید مدیریت قیمت‌ها فعال می‌شوند.
-                      </p>
-                    </div>
-                  )}
+                  {/* Gatekeeping: فرم احراز هویت تا تایید ادمین */}
+                  {!previewAsApproved && <RegistrationGate />}
 
                   <RateBar rates={currencyRates} />
 
