@@ -236,12 +236,21 @@ export default function App() {
       try {
         const adminKey = viewMode === 'admin' && typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('nfs_admin_key') : null;
         const action = adminKey ? 'get_products_admin' : 'get_products';
-        const headers: HeadersInit = adminKey ? { 'X-Admin-Key': adminKey } : {};
+        const headers: Record<string, string> = adminKey ? { 'X-Admin-Key': adminKey } : {};
+        const tgInitData: string = (typeof window !== 'undefined' && (window as any).Telegram?.WebApp?.initData) || '';
+        if (!adminKey && tgInitData) headers['X-Telegram-Init-Data'] = tgInitData;
 
         const isPhpHost = window.location.hostname.includes('nafisstore.com') || window.location.pathname.includes('.php');
         const endpoints = isPhpHost
           ? [`/api.php?action=${action}`, '/api/catalog']
           : ['/api/catalog', `https://nfs.nafisstore.com/api.php?action=${action}`, `/api.php?action=${action}`];
+
+        // ثبت‌نام خودکار کاربر تلگرام (در انتظار تایید) پیش از دریافت کاتالوگ
+        if (!adminKey && tgInitData) {
+          try {
+            await fetch(`${isPhpHost ? '' : 'https://nfs.nafisstore.com'}/api.php?action=my_status`, { headers, cache: 'no-store' });
+          } catch (e) {}
+        }
 
         for (const ep of endpoints) {
           try {
@@ -252,6 +261,10 @@ export default function App() {
             });
             if (res.ok) {
               const data = await res.json();
+              if (!adminKey && typeof data.viewer === 'string') {
+                const st = data.viewer === 'approved' ? 'approved' : 'pending';
+                setCurrentCustomer((prev) => ({ ...prev, status: st }));
+              }
               if (Array.isArray(data.products) && data.products.length > 0) {
                 const clean = deduplicateProducts(data.products);
                 setProductsState(clean);
@@ -602,7 +615,8 @@ export default function App() {
         ? '/api.php?action=get_products&_t=' + Date.now()
         : 'https://nfs.nafisstore.com/api.php?action=get_products&_t=' + Date.now();
 
-      const res = await fetch(ep, { cache: 'no-store' });
+      const adminKey2 = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('nfs_admin_key') : null;
+      const res = await fetch(ep, { cache: 'no-store', headers: adminKey2 ? { 'X-Admin-Key': adminKey2 } : {} });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.products) && data.products.length > 0) {

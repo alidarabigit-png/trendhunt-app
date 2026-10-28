@@ -159,6 +159,11 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
     currentCustomer?.status === 'approved'
   );
 
+  // همگام‌سازی وضعیت تایید با وضعیت واقعی مشتری (از سرور)
+  React.useEffect(() => {
+    setPreviewAsApproved(currentCustomer?.status === 'approved');
+  }, [currentCustomer?.status]);
+
   // Admin PIN Protection states
   const [isAdminPinModalOpen, setIsAdminPinModalOpen] = useState(false);
   const [adminPinInput, setAdminPinInput] = useState('');

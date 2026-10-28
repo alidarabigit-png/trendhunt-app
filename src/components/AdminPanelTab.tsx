@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { CustomerUser, CustomerInquiry } from '../types';
 import { CurrencyFluctuationChart } from './CurrencyFluctuationChart';
+import { TelegramCustomersCard } from './TelegramCustomersCard';
 
 interface AdminPanelTabProps {
   customers: CustomerUser[];
@@ -380,6 +381,7 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
       {/* View 2: Customer Approval & Verification List */}
       {activeAdminSubTab === 'customers' && (
         <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 space-y-4">
+          <TelegramCustomersCard />
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div>
               <h3 className="font-bold text-white text-sm">احراز هویت همکاران و اعطای دسترسی به قیمت‌های عمده</h3>

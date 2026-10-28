@@ -1149,15 +1149,186 @@ if (!function_exists('public_product')) {
     }
 }
 
+/* ---------------- قفل قیمت سمت سرور (فقط مشتری تاییدشده قیمت می‌بیند) ---------------- */
+function request_init_data()
+{
+    $v = header_val('X-Telegram-Init-Data');
+    if ($v === '' && isset($_GET['initData'])) {
+        $v = (string)$_GET['initData'];
+    }
+    return $v;
+}
+
+function is_admin_request()
+{
+    $key = secret('admin_key');
+    return strlen($key) >= 16 && hash_equals($key, header_val('X-Admin-Key'));
+}
+
+function customer_status_by_id($tgId)
+{
+    global $CRM_FILE;
+    $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
+    foreach ((array)(isset($crm['customers']) ? $crm['customers'] : []) as $c) {
+        if (is_array($c) && isset($c['telegramUserId']) && (int)$c['telegramUserId'] === (int)$tgId) {
+            return isset($c['status']) && in_array($c['status'], ['approved', 'rejected', 'pending'], true) ? $c['status'] : 'pending';
+        }
+    }
+    return null;
+}
+
+/* وضعیت بیننده: approved | pending | rejected | anonymous */
+function viewer_status()
+{
+    if (is_admin_request()) {
+        return 'approved';
+    }
+    $u = verify_init_data(request_init_data());
+    if (!$u) {
+        return 'anonymous';
+    }
+    $adminChat = secret('admin_chat_id');
+    if ($adminChat !== '' && (string)$u['id'] === (string)$adminChat) {
+        return 'approved';
+    }
+    $st = customer_status_by_id($u['id']);
+    return $st === null ? 'pending' : $st;
+}
+
+function strip_product_prices($p)
+{
+    if (!is_array($p)) {
+        return $p;
+    }
+    $tiers = [];
+    foreach ((array)(isset($p['tieredPricing']) ? $p['tieredPricing'] : []) as $t) {
+        if (!is_array($t)) {
+            continue;
+        }
+        $x = ['minQuantity' => isset($t['minQuantity']) ? $t['minQuantity'] : 1, 'priceUsd' => 0, 'marginPercent' => 0, 'calculatedPriceToman' => 0];
+        if (isset($t['maxQuantity'])) {
+            $x['maxQuantity'] = $t['maxQuantity'];
+        }
+        $tiers[] = $x;
+    }
+    $p['tieredPricing'] = $tiers;
+    if (isset($p['technicalSpecs']) && is_array($p['technicalSpecs'])) {
+        foreach (array_keys($p['technicalSpecs']) as $k) {
+            if (mb_strpos((string)$k, 'قیمت', 0, 'UTF-8') !== false || stripos((string)$k, 'price') !== false) {
+                unset($p['technicalSpecs'][$k]);
+            }
+        }
+    }
+    $p['pricesLocked'] = true;
+    return $p;
+}
+
 if ($action === 'get_products') {
     $items = read_json($CATALOG_FILE, []);
     if (!is_array($items)) {
         $items = [];
     }
     $liveUsd = (float)get_rates_data()['usd'];
-    out(['success' => true, 'products' => array_map(function ($p) use ($liveUsd) {
-        return public_product($p, $liveUsd);
+    $viewer = viewer_status();
+    $locked = $viewer !== 'approved';
+    out(['success' => true, 'viewer' => $viewer, 'pricesLocked' => $locked, 'products' => array_map(function ($p) use ($liveUsd, $locked) {
+        $pub = public_product($p, $liveUsd);
+        return $locked ? strip_product_prices($pub) : $pub;
     }, $items)]);
+}
+
+/* ثبت‌نام خودکار کاربر تلگرام به‌صورت «در انتظار تایید» و برگرداندن وضعیت */
+if ($action === 'my_status') {
+    rate_limit('mystatus', 60, 3600);
+    if (is_admin_request()) {
+        out(['success' => true, 'status' => 'approved', 'admin' => true]);
+    }
+    $u = verify_init_data(request_init_data());
+    if (!$u) {
+        out(['success' => true, 'status' => 'anonymous']);
+    }
+    $adminChat = secret('admin_chat_id');
+    if ($adminChat !== '' && (string)$u['id'] === (string)$adminChat) {
+        out(['success' => true, 'status' => 'approved', 'admin' => true]);
+    }
+    $isNew = false;
+    $status = with_lock('crm', function () use ($CRM_FILE, $u, &$isNew) {
+        $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
+        if (!isset($crm['customers']) || !is_array($crm['customers'])) {
+            $crm['customers'] = [];
+        }
+        foreach ($crm['customers'] as $c) {
+            if (is_array($c) && isset($c['telegramUserId']) && (int)$c['telegramUserId'] === (int)$u['id']) {
+                return isset($c['status']) && in_array($c['status'], ['approved', 'rejected', 'pending'], true) ? $c['status'] : 'pending';
+            }
+        }
+        $crm['customers'][] = [
+            'telegramUserId' => (int)$u['id'],
+            'name'           => clean(trim((isset($u['first_name']) ? $u['first_name'] : '') . ' ' . (isset($u['last_name']) ? $u['last_name'] : '')), 120),
+            'username'       => clean(isset($u['username']) ? $u['username'] : '', 60),
+            'phone'          => '',
+            'status'         => 'pending',
+            'createdAt'      => date('c'),
+        ];
+        write_json($CRM_FILE, $crm);
+        $isNew = true;
+        return 'pending';
+    });
+    if ($isNew && $adminChat !== '') {
+        tg_call('sendMessage', [
+            'chat_id' => $adminChat,
+            'text' => "👤 درخواست دسترسی جدید به قیمت‌ها\n" . clean(trim((isset($u['first_name']) ? $u['first_name'] : '') . ' ' . (isset($u['last_name']) ? $u['last_name'] : '')), 120)
+                . (!empty($u['username']) ? ' (@' . $u['username'] . ')' : '') . "\nشناسه: " . $u['id']
+                . "\nبرای تایید: پنل ادمین ← مشتریان تلگرام",
+        ]);
+    }
+    out(['success' => true, 'status' => $status]);
+}
+
+/* مدیریت مشتریان (ادمین) */
+if ($action === 'list_customers') {
+    require_admin();
+    $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
+    $list = [];
+    foreach ((array)(isset($crm['customers']) ? $crm['customers'] : []) as $c) {
+        if (is_array($c) && !empty($c['telegramUserId'])) {
+            $c['status'] = isset($c['status']) && in_array($c['status'], ['approved', 'rejected', 'pending'], true) ? $c['status'] : 'pending';
+            $list[] = $c;
+        }
+    }
+    out(['success' => true, 'customers' => $list]);
+}
+
+if ($action === 'set_customer_status' && $method === 'POST') {
+    require_admin();
+    $id = (int)(isset($body['telegramUserId']) ? $body['telegramUserId'] : 0);
+    $st = isset($body['status']) ? (string)$body['status'] : '';
+    if ($id <= 0 || !in_array($st, ['approved', 'rejected', 'pending'], true)) {
+        fail('telegramUserId and valid status required', 422);
+    }
+    $found = with_lock('crm', function () use ($CRM_FILE, $id, $st) {
+        $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
+        foreach ($crm['customers'] as &$c) {
+            if (is_array($c) && isset($c['telegramUserId']) && (int)$c['telegramUserId'] === $id) {
+                $c['status'] = $st;
+                $c['statusAt'] = date('c');
+                unset($c);
+                write_json($CRM_FILE, $crm);
+                return true;
+            }
+        }
+        unset($c);
+        return false;
+    });
+    if (!$found) {
+        fail('Customer not found', 404);
+    }
+    $notified = false;
+    if ($st === 'approved') {
+        $r = tg_call('sendMessage', ['chat_id' => $id, 'text' => "✅ حساب شما تایید شد. اکنون می‌توانید قیمت‌ها را در مینی‌اپ ببینید."]);
+        $notified = !empty($r['ok']);
+    }
+    out(['success' => true, 'customer_notified' => $notified]);
 }
 
 if ($action === 'get_rates') {
@@ -2322,6 +2493,7 @@ $adminActions = [
     'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
     'channel_post_pending', 'ingest_batch', 'normalize_catalog', 'attach_images', 'backup_catalog', 'dedupe_catalog',
+    'list_customers', 'set_customer_status',
     'mark_posted', // FIXED: اکشن mark_posted به لیست ادمین اضافه شد
 ];
 if (in_array($action, $adminActions, true)) {

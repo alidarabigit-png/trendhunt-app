@@ -8,7 +8,7 @@ export const DEFAULT_CUSTOMER: CustomerUser = {
   city: 'تهران',
   phone: '09120000000',
   role: 'customer',
-  status: 'approved',
+  status: 'pending',
   requestedAt: '2026-10-01',
   tier: 'همکار نقره‌ای (تایید شده)',
   totalOrdersCount: 0,
