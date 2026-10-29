@@ -218,6 +218,16 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
   const handleSendInquiry = () => {
     if (!currentProduct) return;
+    if (!previewAsApproved) {
+      // هنوز احراز نشده: به‌جای ثبت استعلام، فرم مشخصات مشتری را نشان بده
+      const el = document.getElementById('nfs-reg-gate');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const first = el.querySelector('input') as HTMLInputElement | null;
+        first?.focus({ preventScroll: true });
+      }
+      return;
+    }
     onSubmitInquiry(currentProduct.id, orderQuantity, customerInquiryNotes);
     setInquirySuccess(true);
     setCustomerInquiryNotes('');
@@ -752,6 +762,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
               {miniAppView === 'detail' && currentProduct ? (
                 /* Dedicated Full Product Detail Page inside Mini App */
                 <div key={currentProduct.id} className="space-y-3 pb-2 mx-page-in">
+                  {!previewAsApproved && <div id="nfs-reg-gate"><RegistrationGate /></div>}
                   {/* Large Image Gallery & Switcher */}
                   <div className="space-y-2">
                     <div className="relative aspect-square w-full rounded-[var(--mx-radius)] overflow-hidden bg-[var(--mx-card)] border border-[color:var(--mx-border)] shadow-md">
