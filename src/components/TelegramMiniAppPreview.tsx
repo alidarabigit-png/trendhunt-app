@@ -219,13 +219,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   const handleSendInquiry = () => {
     if (!currentProduct) return;
     if (!previewAsApproved) {
-      // هنوز احراز نشده: به‌جای ثبت استعلام، فرم مشخصات مشتری را نشان بده
-      const el = document.getElementById('nfs-reg-gate');
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        const first = el.querySelector('input') as HTMLInputElement | null;
-        first?.focus({ preventScroll: true });
-      }
+      // هنوز احراز نشده: فرم مشخصات مشتری را باز کن
+      window.dispatchEvent(new Event('nfs-open-registration'));
       return;
     }
     onSubmitInquiry(currentProduct.id, orderQuantity, customerInquiryNotes);

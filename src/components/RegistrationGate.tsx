@@ -16,6 +16,7 @@ export const RegistrationGate: React.FC = () => {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
   const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
   const hdr = () => ({ 'X-Telegram-Init-Data': initData(), 'Content-Type': 'application/json' });
 
   const load = async () => {
@@ -30,6 +31,15 @@ export const RegistrationGate: React.FC = () => {
     }
   };
   useEffect(() => { load(); }, []);
+  // دکمه‌های بیرونی (مثلاً دکمه‌ی پایین صفحه‌ی محصول) فرم را باز می‌کنند
+  useEffect(() => {
+    const h = () => {
+      setOpen(true);
+      setTimeout(() => document.getElementById('nfs-reg-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 60);
+    };
+    window.addEventListener('nfs-open-registration', h);
+    return () => window.removeEventListener('nfs-open-registration', h);
+  }, []);
 
   const set = (k: keyof Profile) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm((f) => ({ ...f, [k]: e.target.value }));
@@ -79,8 +89,19 @@ export const RegistrationGate: React.FC = () => {
     );
   }
 
+  if (!open && !editing) {
+    return (
+      <div className={box}>
+        <div className="font-bold flex items-center gap-1"><Lock className="w-3.5 h-3.5" />قیمت‌ها فقط برای همکاران تاییدشده نمایش داده می‌شود</div>
+        <button type="button" onClick={() => setOpen(true)} className="w-full py-2 rounded-lg bg-[var(--mx-btn)] text-[color:var(--mx-btn-text)] font-bold cursor-pointer">
+          ارسال درخواست احراز هویت همکار
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <form onSubmit={submit} className={box}>
+    <form id="nfs-reg-form" onSubmit={submit} className={box}>
       <div className="font-bold flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" />احراز هویت همکار برای مشاهده قیمت‌ها</div>
       <p className="opacity-80 leading-relaxed">مشخصات زیر را کامل وارد کنید. پس از بررسی و تایید مدیریت، قیمت‌های عمده نمایش داده می‌شود.</p>
       <input className={inp} placeholder="نام و نام خانوادگی *" value={form.name} onChange={set('name')} required />
