@@ -20,47 +20,77 @@ import { CustomerUser, CustomerInquiry } from '../types';
 import { CurrencyFluctuationChart } from './CurrencyFluctuationChart';
 import { TelegramCustomersCard } from './TelegramCustomersCard';
 
+type ReplyResult = { ok: boolean; error?: string; notified?: boolean };
+
 interface AdminPanelTabProps {
   customers: CustomerUser[];
-  onApproveCustomer: (id: string) => void;
-  onRejectCustomer: (id: string) => void;
   inquiries: CustomerInquiry[];
-  onReplyToInquiry: (inquiryId: string, replyText: string, newStatus?: CustomerInquiry['status'], newUnitPriceToman?: number) => void;
-  onClearDemoData?: () => void;
+  onReplyToInquiry: (inquiryId: string, replyText: string, newStatus?: CustomerInquiry['status'], newUnitPriceToman?: number) => Promise<ReplyResult>;
+  onRefresh?: () => void;
 }
 
-export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
-  customers,
-  onApproveCustomer,
-  onRejectCustomer,
-  inquiries,
-  onReplyToInquiry,
-  onClearDemoData,
-}) => {
+const STATUS_LABEL: Record<string, string> = {
+  pending_review: 'در انتظار بررسی',
+  quoted: 'پیش‌فاکتور صادر شد',
+  approved_by_client: 'تایید نهایی مشتری',
+  procuring: 'در حال تامین و حمل',
+  rejected: 'رد شده',
+};
+const STATUS_STYLE: Record<string, string> = {
+  pending_review: 'bg-amber-500/20 text-amber-300 border border-amber-500/30',
+  quoted: 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30',
+  approved_by_client: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30',
+  procuring: 'bg-sky-500/20 text-sky-300 border border-sky-500/30',
+  rejected: 'bg-rose-500/20 text-rose-300 border border-rose-500/30',
+};
+
+export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({ customers, inquiries, onReplyToInquiry, onRefresh }) => {
   const [activeAdminSubTab, setActiveAdminSubTab] = useState<'inquiries' | 'customers' | 'currency'>('inquiries');
-  const [selectedInquiry, setSelectedInquiry] = useState<CustomerInquiry | null>(inquiries[0] || null);
-  const [isConfirmingClear, setIsConfirmingClear] = useState<boolean>(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'pending' | 'open'>('all');
   const [replyMessage, setReplyMessage] = useState('');
   const [customQuoteToman, setCustomQuoteToman] = useState<number | ''>('');
   const [selectedStatus, setSelectedStatus] = useState<CustomerInquiry['status']>('quoted');
+  const [busy, setBusy] = useState(false);
+  const [feedback, setFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
   const pendingCustomers = (customers || []).filter((c) => c?.status === 'pending');
   const approvedCustomers = (customers || []).filter((c) => c?.status === 'approved');
   const pendingInquiries = (inquiries || []).filter((i) => i?.status === 'pending_review');
+  const visible = (inquiries || []).filter((i) =>
+    filter === 'pending' ? i.status === 'pending_review' : filter === 'open' ? !['rejected', 'approved_by_client'].includes(i.status) : true
+  );
+  const selectedInquiry = (inquiries || []).find((i) => i.id === selectedId) || null;
+  const totalValue = (inquiries || []).filter((i) => i.status !== 'rejected').reduce((acc, i) => acc + (i.totalPriceToman || 0), 0);
 
-  const handleSendReply = (e: React.FormEvent) => {
+  const pick = (inq: CustomerInquiry) => {
+    setSelectedId(inq.id);
+    setCustomQuoteToman(inq.unitPriceToman || '');
+    setSelectedStatus(inq.status === 'pending_review' ? 'quoted' : inq.status);
+    setReplyMessage('');
+    setFeedback(null);
+  };
+
+  const handleSendReply = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedInquiry || !replyMessage.trim()) return;
-
-    onReplyToInquiry(
+    if (!selectedInquiry || busy) return;
+    const priceChanged = customQuoteToman !== '' && Number(customQuoteToman) !== selectedInquiry.unitPriceToman;
+    if (!replyMessage.trim() && !priceChanged && selectedStatus === selectedInquiry.status) return;
+    setBusy(true);
+    setFeedback(null);
+    const r = await onReplyToInquiry(
       selectedInquiry.id,
       replyMessage.trim(),
       selectedStatus,
-      customQuoteToman ? Number(customQuoteToman) : undefined
+      customQuoteToman !== '' ? Number(customQuoteToman) : undefined
     );
-
-    setReplyMessage('');
-    setCustomQuoteToman('');
+    setBusy(false);
+    if (r.ok) {
+      setReplyMessage('');
+      setFeedback({ ok: true, text: r.notified ? 'ذخیره شد و پیام در تلگرام مشتری ارسال شد.' : 'ذخیره شد، اما ارسال پیام تلگرام ناموفق بود (مشتری در مینی‌اپ پاسخ را می‌بیند).' });
+    } else {
+      setFeedback({ ok: false, text: r.error || 'خطا در ثبت پاسخ' });
+    }
   };
 
   return (
@@ -104,7 +134,7 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           <div>
             <div className="text-[11px] text-slate-400">کل ارزش پیش‌فاکتورها:</div>
             <div className="text-sm font-bold text-amber-300 font-mono">
-              {(inquiries.reduce((acc, i) => acc + i.totalPriceToman, 0) / 1000000).toLocaleString('en-US')} M تومان
+              {(totalValue / 1000000).toLocaleString('en-US', { maximumFractionDigits: 1 })} M تومان
             </div>
           </div>
         </div>
@@ -133,7 +163,7 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>تایید و مدیریت همکاران و مشتریان ({customers.length})</span>
+          <span>همکاران و احراز هویت ({customers.length})</span>
           {pendingCustomers.length > 0 && (
             <span className="bg-[#A91D2E] text-white text-[10px] px-1.5 py-0.2 rounded-full font-mono">
               {pendingCustomers.length}
@@ -154,113 +184,72 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
         </button>
 
 
-        {onClearDemoData && (
-          isConfirmingClear ? (
-            <div className="mr-auto flex items-center gap-1.5 bg-rose-600 text-white px-3 py-1.5 rounded-xl text-xs font-bold shadow-lg animate-pulse">
-              <button
-                onClick={() => {
-                  onClearDemoData();
-                  setIsConfirmingClear(false);
-                }}
-                className="cursor-pointer hover:underline flex items-center gap-1 text-white"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span>مطمئنید؟ کلیک مجدد برای حذف قطعی</span>
-              </button>
-              <button
-                onClick={() => setIsConfirmingClear(false)}
-                className="p-1 hover:bg-rose-700 rounded-lg text-white/90 hover:text-white cursor-pointer"
-                title="انصراف"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={() => {
-                setIsConfirmingClear(true);
-                setTimeout(() => setIsConfirmingClear(false), 5000);
-              }}
-              className="mr-auto px-3 py-1.5 rounded-xl text-xs font-bold text-rose-300 hover:text-white bg-rose-950/40 hover:bg-rose-900/60 border border-rose-800/50 transition cursor-pointer flex items-center gap-1.5"
-              title="حذف داده‌های آزمایشی و تست"
-            >
-              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-              <span>پاکسازی داده‌های نمونه</span>
-            </button>
-          )
-        )}
+        <button onClick={() => onRefresh && onRefresh()} className="mr-auto px-3 py-2 rounded-xl text-xs text-slate-300 bg-[#0B0C0E] hover:text-white cursor-pointer">بروزرسانی</button>
       </div>
 
       {/* View 3: Recharts Currency Fluctuation Chart */}
       {activeAdminSubTab === 'currency' && <CurrencyFluctuationChart />}
 
 
-      {/* View 1: Inquiries Management & Quick CRM Chat */}
+      {/* View 1: استعلام‌های واقعی مشتریان */}
       {activeAdminSubTab === 'inquiries' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Inquiries List (Left 5 cols) */}
           <div className="lg:col-span-5 space-y-3">
-            <h4 className="text-xs font-bold text-slate-300">لیست استعلام‌های دریافتی از مینی‌آپ تلگرام:</h4>
+            <div className="flex items-center justify-between gap-2">
+              <h4 className="text-xs font-bold text-slate-300">استعلام‌های دریافتی از مینی‌اپ تلگرام</h4>
+              <div className="flex gap-1 text-[10px]">
+                {([['all', 'همه'], ['pending', 'در انتظار'], ['open', 'باز']] as const).map(([k, l]) => (
+                  <button key={k} onClick={() => setFilter(k)} className={`px-2 py-1 rounded-lg cursor-pointer ${filter === k ? 'bg-[#A91D2E] text-white' : 'bg-[#0B0C0E] text-slate-400'}`}>{l}</button>
+                ))}
+              </div>
+            </div>
             <div className="space-y-2.5 max-h-[640px] overflow-y-auto no-scrollbar">
-              {inquiries.map((inq) => {
-                const isSelected = selectedInquiry?.id === inq.id;
+              {visible.length === 0 && (
+                <div className="text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl p-6 text-center">
+                  هنوز استعلامی ثبت نشده. وقتی همکار تاییدشده از مینی‌اپ استعلام بزند، همین‌جا و در تلگرام شما اعلام می‌شود.
+                </div>
+              )}
+              {visible.map((inq) => {
+                const isSelected = selectedId === inq.id;
+                const last = inq.messages[inq.messages.length - 1];
+                const needsReply = inq.status === 'pending_review';
                 return (
                   <div
                     key={inq.id}
-                    onClick={() => {
-                      setSelectedInquiry(inq);
-                      setCustomQuoteToman(inq.unitPriceToman);
-                    }}
+                    onClick={() => pick(inq)}
                     className={`p-3.5 rounded-2xl border transition cursor-pointer space-y-2 ${
-                      isSelected
-                        ? 'bg-slate-800/90 border-amber-400/80 ring-1 ring-amber-400/40'
-                        : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
+                      isSelected ? 'bg-slate-800/90 border-[#A91D2E] ring-1 ring-[#A91D2E]/40' : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'
                     }`}
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-[11px] font-mono text-slate-400">{inq.id}</span>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          inq.status === 'pending_review'
-                            ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
-                            : inq.status === 'quoted'
-                            ? 'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                            : inq.status === 'approved_by_client'
-                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
-                            : 'bg-slate-800 text-slate-400'
-                        }`}
-                      >
-                        {inq.status === 'pending_review'
-                          ? 'در انتظار بررسی'
-                          : inq.status === 'quoted'
-                          ? 'پیش‌فاکتور صادر شد'
-                          : inq.status === 'approved_by_client'
-                          ? 'تایید نهایی مشتری'
-                          : 'بایگانی'}
+                      <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${STATUS_STYLE[inq.status] || 'bg-slate-800 text-slate-400'}`}>
+                        {STATUS_LABEL[inq.status] || inq.status}
                       </span>
                     </div>
-
                     <div className="flex items-center gap-2.5">
-                      <img
-                        src={inq.productImage}
-                        alt=""
-                        className="w-11 h-11 rounded-lg object-cover bg-slate-800 shrink-0"
-                      />
+                      {inq.productImage ? (
+                        <img src={inq.productImage} alt="" className="w-11 h-11 rounded-lg object-cover bg-slate-800 shrink-0" />
+                      ) : (
+                        <div className="w-11 h-11 rounded-lg bg-slate-800 shrink-0" />
+                      )}
                       <div className="space-y-0.5 min-w-0">
                         <div className="text-xs font-bold text-white truncate">{inq.productTitle}</div>
-                        <div className="text-[11px] text-slate-400 flex items-center gap-2">
-                          <span>مشتری: <strong className="text-slate-200">{inq.customerName}</strong></span>
+                        <div className="text-[11px] text-slate-400 flex items-center gap-2 flex-wrap">
+                          <span><strong className="text-slate-200">{inq.customerName}</strong></span>
                           <span>•</span>
-                          <span>تیراژ: <strong className="text-amber-300 font-mono">{inq.requestedQuantity}</strong> عدد</span>
+                          <span><strong className="text-amber-300 font-mono">{inq.requestedQuantity}</strong> عدد</span>
                         </div>
                       </div>
                     </div>
-
+                    {last && (
+                      <div className={`text-[11px] truncate ${last.sender === 'customer' && needsReply ? 'text-amber-200' : 'text-slate-500'}`}>
+                        {last.sender === 'admin' ? 'شما: ' : 'مشتری: '}{last.text}
+                      </div>
+                    )}
                     <div className="flex items-center justify-between pt-1 border-t border-slate-800 text-[11px]">
-                      <span className="text-slate-400">مبلغ کل پیشنهادی:</span>
-                      <span className="font-bold text-emerald-400 font-mono">
-                        {inq.totalPriceToman.toLocaleString('en-US')} تومان
-                      </span>
+                      <span className="text-slate-500">{inq.updatedAt}</span>
+                      <span className="font-bold text-emerald-400 font-mono">{(inq.totalPriceToman || 0).toLocaleString('en-US')} تومان</span>
                     </div>
                   </div>
                 );
@@ -268,55 +257,48 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
             </div>
           </div>
 
-          {/* Quick Chat & Quote Form (Right 7 cols) */}
           <div className="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-3xl p-5 space-y-4">
             {selectedInquiry ? (
               <>
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                  <div>
-                    <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800 gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-bold text-white flex items-center gap-2 flex-wrap">
                       <span>مکاتبه با {selectedInquiry.customerName}</span>
-                      <span className="text-xs text-sky-400 font-mono" dir="ltr">@{selectedInquiry.customerTelegram}</span>
+                      {selectedInquiry.customerTelegram && <span className="text-xs text-sky-400 font-mono" dir="ltr">@{selectedInquiry.customerTelegram}</span>}
                     </h3>
-                    <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                    <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5 flex-wrap">
                       <Phone className="w-3 h-3" />
-                      <span>{selectedInquiry.customerPhone}</span>
+                      <span>{selectedInquiry.customerPhone || 'تلفن ثبت نشده'}</span>
+                      {selectedInquiry.adminNotes && (<><span>•</span><span>{selectedInquiry.adminNotes}</span></>)}
                       <span>•</span>
-                      <span>تیراژ درخواستی: <strong className="text-white font-mono">{selectedInquiry.requestedQuantity}</strong> عدد</span>
+                      <span className="truncate">{selectedInquiry.productTitle}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      تیراژ: <strong className="text-white font-mono">{selectedInquiry.requestedQuantity}</strong> عدد · قیمت واحد فعلی:{' '}
+                      <strong className="text-emerald-400 font-mono">{(selectedInquiry.unitPriceToman || 0).toLocaleString('en-US')}</strong> تومان
                     </div>
                   </div>
-
-                  <span className="text-[11px] font-mono text-slate-400">{selectedInquiry.createdAt}</span>
+                  <span className="text-[11px] font-mono text-slate-400 shrink-0">{selectedInquiry.createdAt}</span>
                 </div>
 
-                {/* Conversation History */}
                 <div className="space-y-2.5 max-h-[300px] overflow-y-auto no-scrollbar p-3 bg-slate-950/60 rounded-2xl border border-slate-800/80">
+                  {selectedInquiry.messages.length === 0 && <div className="text-[11px] text-slate-500 text-center py-4">مشتری پیام متنی نگذاشته است؛ فقط درخواست قیمت ثبت شده.</div>}
                   {selectedInquiry.messages.map((m) => {
                     const isAdmin = m.sender === 'admin';
                     return (
-                      <div
-                        key={m.id}
-                        className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}
-                      >
-                        <div
-                          className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed space-y-1 ${
-                            isAdmin
-                              ? 'bg-indigo-600/30 text-indigo-100 border border-indigo-500/40'
-                              : 'bg-slate-800 text-slate-200 border border-slate-700'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between text-[10px] opacity-75 font-semibold">
+                      <div key={m.id} className={`flex flex-col ${isAdmin ? 'items-end' : 'items-start'}`}>
+                        <div className={`max-w-[85%] rounded-2xl p-3 text-xs leading-relaxed space-y-1 ${isAdmin ? 'bg-indigo-600/30 text-indigo-100 border border-indigo-500/40' : 'bg-slate-800 text-slate-200 border border-slate-700'}`}>
+                          <div className="flex items-center justify-between gap-3 text-[10px] opacity-75 font-semibold">
                             <span>{m.senderName}</span>
                             <span className="font-mono">{m.timestamp}</span>
                           </div>
-                          <p>{m.text}</p>
+                          <p className="whitespace-pre-line">{m.text}</p>
                         </div>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* Admin Reply & Pricing Controls */}
                 <form onSubmit={handleSendReply} className="space-y-3 pt-2">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div>
@@ -324,148 +306,67 @@ export const AdminPanelTab: React.FC<AdminPanelTabProps> = ({
                       <input
                         type="number"
                         value={customQuoteToman}
-                        onChange={(e) => setCustomQuoteToman(Number(e.target.value))}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold focus:outline-none focus:border-amber-400"
+                        onChange={(e) => setCustomQuoteToman(e.target.value === '' ? '' : Number(e.target.value))}
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-emerald-400 font-mono font-bold focus:outline-none focus:border-[#A91D2E]"
                         placeholder="قیمت هر واحد..."
                       />
+                      {customQuoteToman !== '' && (
+                        <div className="text-[10px] text-slate-500 mt-1">مبلغ کل: {(Number(customQuoteToman) * selectedInquiry.requestedQuantity).toLocaleString('en-US')} تومان</div>
+                      )}
                     </div>
-
                     <div>
-                      <label className="block text-slate-400 mb-1">تغییر وضعیت استعلام:</label>
+                      <label className="block text-slate-400 mb-1">وضعیت استعلام:</label>
                       <select
                         value={selectedStatus}
                         onChange={(e) => setSelectedStatus(e.target.value as any)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-400 font-semibold"
+                        className="w-full bg-slate-800 border border-slate-700 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-[#A91D2E] font-semibold"
                       >
                         <option value="pending_review">در انتظار بررسی</option>
-                        <option value="quoted">صدور پیش‌فاکتور (قیمت تایید شد)</option>
+                        <option value="quoted">صدور پیش‌فاکتور (مشتری می‌تواند تایید کند)</option>
                         <option value="approved_by_client">تایید مشتری و ثبت قطعی</option>
-                        <option value="procuring">در حال بارگیری از گمرک چین / دبی</option>
+                        <option value="procuring">در حال تامین و حمل</option>
                         <option value="rejected">رد درخواست</option>
                       </select>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-slate-400 mb-1 text-xs">متن پیام یا توضیحات پیش‌فاکتور برای مشتری:</label>
+                    <label className="block text-slate-400 mb-1 text-xs">پیام برای مشتری (در مینی‌اپ و تلگرام او ارسال می‌شود):</label>
                     <textarea
                       rows={3}
                       value={replyMessage}
                       onChange={(e) => setReplyMessage(e.target.value)}
-                      placeholder="متن پیام شما مستقیماً در پنل شخصی مشتری در مینی‌آپ و تلگرام ارسال می‌شود..."
-                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-amber-400 placeholder:text-slate-500"
+                      placeholder="مثلاً: قیمت نهایی با احتساب حمل… اعتبار پیش‌فاکتور ۲۴ ساعت"
+                      className="w-full bg-slate-800 border border-slate-700 rounded-xl p-3 text-xs text-slate-200 focus:outline-none focus:border-[#A91D2E] placeholder:text-slate-500"
                     />
                   </div>
+
+                  {feedback && <div className={`text-[11px] ${feedback.ok ? 'text-emerald-400' : 'text-rose-400'}`}>{feedback.text}</div>}
 
                   <div className="flex justify-end">
                     <button
                       type="submit"
-                      disabled={!replyMessage.trim()}
-                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition disabled:opacity-50 cursor-pointer"
+                      disabled={busy}
+                      className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-[#A91D2E] hover:bg-[#871523] text-white font-bold text-xs shadow-md transition disabled:opacity-50 cursor-pointer"
                     >
                       <Send className="w-4 h-4" />
-                      <span>ارسال پاسخ و پیش‌فاکتور به مشتری</span>
+                      <span>{busy ? 'در حال ارسال…' : 'ثبت و ارسال به مشتری'}</span>
                     </button>
                   </div>
                 </form>
               </>
             ) : (
-              <div className="text-center py-16 text-slate-500 text-xs">
-                یک استعلام را از لیست انتخاب کنید تا پرونده و پیام‌ها نمایش داده شوند.
-              </div>
+              <div className="text-center py-16 text-slate-500 text-xs">یک استعلام را از لیست انتخاب کنید تا پرونده و پیام‌ها نمایش داده شوند.</div>
             )}
           </div>
         </div>
       )}
 
-      {/* View 2: Customer Approval & Verification List */}
+      {/* View 2: همکاران و احراز هویت (داده‌ی واقعی تلگرام) */}
       {activeAdminSubTab === 'customers' && (
         <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-5 space-y-4">
-          <TelegramCustomersCard />
-          <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-            <div>
-              <h3 className="font-bold text-white text-sm">احراز هویت همکاران و اعطای دسترسی به قیمت‌های عمده</h3>
-              <p className="text-xs text-slate-400">
-                تنها کاربرانی که در این بخش تایید شوند می‌توانند قیمت‌های پلکانی را در مینی‌آپ و کانال مشاهده کنند.
-              </p>
-            </div>
-            <span className="text-xs text-amber-300 font-mono font-bold bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20">
-              {customers.length} کاربر ثبت شده
-            </span>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs text-right border-collapse">
-              <thead>
-                <tr className="bg-slate-950/60 text-slate-400 border-b border-slate-800">
-                  <th className="p-3">نام و شرکت همکار</th>
-                  <th className="p-3">آیدی تلگرام و تلفن</th>
-                  <th className="p-3">شهر / منطقه بازرگانی</th>
-                  <th className="p-3">سطح دسترسی (Tier)</th>
-                  <th className="p-3">وضعیت تایید</th>
-                  <th className="p-3 text-center">عملیات احراز هویت</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {customers.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-800/40 transition">
-                    <td className="p-3">
-                      <div className="font-bold text-white">{c.name}</div>
-                      <div className="text-[11px] text-slate-400">{c.companyName}</div>
-                    </td>
-                    <td className="p-3 font-mono">
-                      <div className="text-sky-400" dir="ltr">@{c.telegramUsername}</div>
-                      <div className="text-slate-400 text-[11px]">{c.phone}</div>
-                    </td>
-                    <td className="p-3 text-slate-300">{c.city}</td>
-                    <td className="p-3">
-                      <span className="bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded-full text-[10px] font-semibold border border-indigo-500/30">
-                        {c.tier}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {c.status === 'approved' ? (
-                        <span className="bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-fit">
-                          <Check className="w-3 h-3" />
-                          تایید شده
-                        </span>
-                      ) : c.status === 'pending' ? (
-                        <span className="bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded-full text-[10px] font-bold flex items-center gap-1 w-fit">
-                          <Clock className="w-3 h-3" />
-                          در انتظار بررسی
-                        </span>
-                      ) : (
-                        <span className="bg-rose-500/20 text-rose-400 px-2 py-0.5 rounded-full text-[10px] font-bold w-fit">
-                          رد شده
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3 text-center">
-                      <div className="flex items-center justify-center gap-2">
-                        {c.status !== 'approved' ? (
-                          <button
-                            onClick={() => onApproveCustomer(c.id)}
-                            className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold transition text-xs shadow-sm cursor-pointer"
-                          >
-                            <Check className="w-3.5 h-3.5" />
-                            <span>تایید و فعال‌سازی قیمت‌ها</span>
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => onRejectCustomer(c.id)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900/60 text-rose-300 transition text-[11px] cursor-pointer"
-                          >
-                            <X className="w-3 h-3" />
-                            <span>تعلیق دسترسی</span>
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <p className="text-xs text-slate-400">تنها همکارانی که اینجا تایید شوند قیمت‌های پلکانی را می‌بینند و می‌توانند استعلام ثبت کنند. با تایید، پیام تلگرامی برای مشتری ارسال می‌شود.</p>
+          <TelegramCustomersCard onChanged={onRefresh} />
         </div>
       )}
     </div>

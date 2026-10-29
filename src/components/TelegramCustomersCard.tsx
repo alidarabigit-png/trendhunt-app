@@ -15,7 +15,7 @@ interface TgCustomer {
 }
 
 /** مشتریان واقعی تلگرام: تایید / رد دسترسی به قیمت‌ها (قفل سمت سرور) */
-export const TelegramCustomersCard: React.FC = () => {
+export const TelegramCustomersCard: React.FC<{ onChanged?: () => void }> = ({ onChanged }) => {
   const [list, setList] = useState<TgCustomer[]>([]);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [err, setErr] = useState('');
@@ -48,6 +48,7 @@ export const TelegramCustomersCard: React.FC = () => {
       const d = await r.json();
       if (!r.ok || !d.success) throw new Error(d.error || 'خطا');
       await load();
+      onChanged && onChanged();
     } catch (e: any) {
       alert('خطا: ' + (e?.message || ''));
     }

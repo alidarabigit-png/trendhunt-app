@@ -23,7 +23,8 @@ import {
   MiniAppUi,
 } from './types';
 import { INITIAL_PRODUCTS } from './data/sampleProducts';
-import { INITIAL_CUSTOMERS, INITIAL_INQUIRIES, DEFAULT_CUSTOMER } from './data/sampleCustomers';
+import { DEFAULT_CUSTOMER } from './data/sampleCustomers';
+import { adminKey, tgInitData, fetchMyInquiries, submitInquiry, customerSendMessage, customerConfirmProforma, adminListInquiries, adminReply, adminListCustomers } from './utils/crmApi';
 import { DEFAULT_RATES, fetchLiveExchangeRates, saveCustomRatesToServer } from './services/currencyService';
 import { initAuth, googleSignIn, logout } from './services/firebaseAuth';
 import {
@@ -330,41 +331,31 @@ export default function App() {
     fetchRemoteSettings();
   }, [viewMode]);
 
-  const [customers, setCustomersState] = useState<CustomerUser[]>(() => {
-    try {
-      const saved = localStorage.getItem('nfs_crm_customers');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return INITIAL_CUSTOMERS;
+  // مشتریان و استعلام‌ها همیشه از سرور واقعی می‌آیند (نه localStorage)
+  const [customers, setCustomers] = useState<CustomerUser[]>([]);
+  const [inquiries, setInquiries] = useState<CustomerInquiry[]>([]);
+  const [readMsgIds, setReadMsgIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('nfs_read_msgs') || '[]'); } catch (e) { return []; }
   });
 
-  const setCustomers = (val: CustomerUser[] | ((prev: CustomerUser[]) => CustomerUser[])) => {
-    setCustomersState((prev) => {
-      const next = typeof val === 'function' ? val(prev) : val;
-      try {
-        localStorage.setItem('nfs_crm_customers', JSON.stringify(next));
-      } catch (e) {}
-      return next;
-    });
-  };
+  const refreshCrm = React.useCallback(async () => {
+    if (viewMode === 'admin' && adminKey()) {
+      const [inq, cust] = await Promise.all([adminListInquiries(), adminListCustomers()]);
+      if (inq) setInquiries(inq);
+      if (cust) setCustomers(cust);
+    } else if (tgInitData()) {
+      const inq = await fetchMyInquiries();
+      if (inq) setInquiries(inq);
+    }
+  }, [viewMode]);
 
-  const [inquiries, setInquiriesState] = useState<CustomerInquiry[]>(() => {
-    try {
-      const saved = localStorage.getItem('nfs_crm_inquiries');
-      if (saved) return JSON.parse(saved);
-    } catch (e) {}
-    return INITIAL_INQUIRIES;
-  });
-
-  const setInquiries = (val: CustomerInquiry[] | ((prev: CustomerInquiry[]) => CustomerInquiry[])) => {
-    setInquiriesState((prev) => {
-      const next = typeof val === 'function' ? val(prev) : val;
-      try {
-        localStorage.setItem('nfs_crm_inquiries', JSON.stringify(next));
-      } catch (e) {}
-      return next;
-    });
-  };
+  useEffect(() => {
+    refreshCrm();
+    const t = setInterval(() => { if (!document.hidden) refreshCrm(); }, 20000);
+    const onVis = () => { if (!document.hidden) refreshCrm(); };
+    document.addEventListener('visibilitychange', onVis);
+    return () => { clearInterval(t); document.removeEventListener('visibilitychange', onVis); };
+  }, [refreshCrm]);
 
   const [currentCustomer, setCurrentCustomer] = useState<CustomerUser>(() => {
     try {
@@ -539,7 +530,6 @@ export default function App() {
   const [isCurrencyModalOpen, setIsCurrencyModalOpen] = useState(false);
   const [isSheetCleanerOpen, setIsSheetCleanerOpen] = useState(false);
 
-  const [miniAppNotifications, setMiniAppNotifications] = useState<MiniAppNotification[]>([]);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -865,120 +855,73 @@ export default function App() {
     );
   };
 
-  const handleApproveCustomer = (id: string) => {
-    setCustomers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: 'approved' } : c))
-    );
-  };
+  type Res = { ok: boolean; error?: string; notified?: boolean };
 
-  const handleRejectCustomer = (id: string) => {
-    setCustomers((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, status: 'rejected' } : c))
-    );
-  };
-
-  const handleRegisterCustomer = (
-    data: Omit<CustomerUser, 'id' | 'requestedAt' | 'totalOrdersCount' | 'tier' | 'status'>
-  ) => {
-    const newCust: CustomerUser = {
-      ...data,
-      id: `CUST-${Math.floor(100 + Math.random() * 900)}`,
-      status: 'pending',
-      requestedAt: new Date().toISOString().split('T')[0],
-      tier: 'همکار برنزی',
-      totalOrdersCount: 0,
-    };
-    setCustomers((prev) => [newCust, ...prev]);
-    setCurrentCustomer(newCust);
-  };
-
-  const handleSubmitInquiry = (productId: string, quantity: number) => {
-    const targetProduct = products.find((p) => p.id === productId);
-    if (!targetProduct) return;
-    let matchedTier = targetProduct.tieredPricing[0];
-    for (const t of targetProduct.tieredPricing) {
-      if (quantity >= t.minQuantity) matchedTier = t;
+  // ثبت استعلام توسط مشتری (فقط داخل تلگرام و برای همکار تاییدشده)
+  const handleSubmitInquiry = async (productId: string, quantity: number, notes?: string): Promise<Res> => {
+    if (!tgInitData()) {
+      return { ok: false, error: 'این حالت فقط پیش‌نمایش است؛ استعلام را باید از داخل ربات تلگرام ثبت کنید.' };
     }
-    const unitToman = matchedTier?.calculatedPriceToman || Math.round(targetProduct.costPerUnitUsd * currencyRates.usd * 1.4);
-    const newInquiry: CustomerInquiry = {
-      id: `INQ-${Math.floor(1000 + Math.random() * 9000)}`,
-      customerId: currentCustomer.id,
-      customerName: currentCustomer.name,
-      customerTelegram: currentCustomer.telegramUsername,
-      customerPhone: currentCustomer.phone,
-      productId: targetProduct.id,
-      productTitle: targetProduct.faTitle,
-      productImage: targetProduct.mainImage,
-      requestedQuantity: quantity,
-      unitPriceToman: unitToman,
-      totalPriceToman: unitToman * quantity,
-      unitPriceUsd: matchedTier?.priceUsd || targetProduct.costPerUnitUsd,
-      status: 'pending_review',
-      createdAt: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      updatedAt: new Date().toLocaleTimeString('en-US', { hour12: false }),
-      messages: [],
-    };
-    setInquiries((prev) => [newInquiry, ...prev]);
+    const r = await submitInquiry(productId, quantity, (notes || '').trim());
+    if (r.ok) refreshCrm();
+    return { ok: r.ok, error: r.error };
   };
 
-  const handleReplyToInquiry = (
+  // پاسخ ادمین (ذخیره روی سرور + اعلان تلگرام به مشتری)
+  const handleReplyToInquiry = async (
     inquiryId: string,
     replyText: string,
     newStatus?: CustomerInquiry['status'],
     newUnitPriceToman?: number
-  ) => {
-    setInquiries((prev) =>
-      prev.map((inq) => {
-        if (inq.id !== inquiryId) return inq;
-        const updatedUnit = newUnitPriceToman !== undefined ? newUnitPriceToman : inq.unitPriceToman;
-        return {
-          ...inq,
-          status: newStatus || inq.status,
-          unitPriceToman: updatedUnit,
-          totalPriceToman: updatedUnit * inq.requestedQuantity,
-          updatedAt: new Date().toLocaleTimeString('en-US', { hour12: false }),
-          messages: [
-            ...inq.messages,
-            {
-              id: `msg-${Date.now()}`,
-              sender: 'admin',
-              senderName: 'مدیریت بازرگانی',
-              text: replyText,
-              timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-            },
-          ],
-        };
-      })
-    );
+  ): Promise<Res> => {
+    const r = await adminReply(inquiryId, { text: replyText, status: newStatus, unitPriceToman: newUnitPriceToman });
+    if (r.ok) await refreshCrm();
+    return { ok: r.ok, error: r.error, notified: !!r.data?.customer_notified };
   };
 
-  const handleCustomerSendMessage = (inquiryId: string, text: string) => {
-    setInquiries((prev) =>
-      prev.map((inq) => {
-        if (inq.id !== inquiryId) return inq;
-        return {
-          ...inq,
-          updatedAt: new Date().toLocaleTimeString('en-US', { hour12: false }),
-          messages: [
-            ...inq.messages,
-            {
-              id: `msg-${Date.now()}`,
-              sender: 'customer',
-              senderName: currentCustomer.name,
-              text,
-              timestamp: new Date().toLocaleTimeString('en-US', { hour12: false }),
-            },
-          ],
-        };
-      })
-    );
+  const handleCustomerSendMessage = async (inquiryId: string, text: string) => {
+    if (!tgInitData() || !text.trim()) return;
+    const r = await customerSendMessage(inquiryId, text.trim());
+    if (!r.ok) showToast(r.error || 'ارسال پیام ناموفق بود');
+    refreshCrm();
   };
 
-  const handleApproveProforma = (inquiryId: string) => {
-    setInquiries((prev) =>
-      prev.map((i) => (i.id === inquiryId ? { ...i, status: 'approved_by_client' } : i))
-    );
+  const handleApproveProforma = async (inquiryId: string) => {
+    if (!tgInitData()) return;
+    const r = await customerConfirmProforma(inquiryId);
+    if (!r.ok) showToast(r.error || 'تایید ناموفق بود');
+    refreshCrm();
   };
+
+  // اعلان‌های مشتری = پیام‌های ادمین (خوانده‌نشده‌ها با نقطه‌ی قرمز)
+  const miniAppNotifications: MiniAppNotification[] = React.useMemo(
+    () =>
+      inquiries
+        .flatMap((q) =>
+          q.messages
+            .filter((m) => m.sender === 'admin')
+            .map((m) => ({
+              id: m.id,
+              inquiryId: q.id,
+              title: q.status === 'quoted' ? 'پیش‌فاکتور شما آماده است' : 'پاسخ مدیریت به استعلام شما',
+              message: m.text,
+              timestamp: m.timestamp,
+              read: readMsgIds.includes(m.id),
+              type: 'inquiry_response' as const,
+              productTitle: q.productTitle,
+              productImage: q.productImage,
+            }))
+        )
+        .reverse(),
+    [inquiries, readMsgIds]
+  );
+  const markNotificationRead = (id: string) =>
+    setReadMsgIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id].slice(-500);
+      try { localStorage.setItem('nfs_read_msgs', JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
 
   if (viewMode === 'miniapp') {
     return (
@@ -991,9 +934,7 @@ export default function App() {
         currentCustomer={currentCustomer}
         onSubmitInquiry={handleSubmitInquiry}
         notifications={miniAppNotifications}
-        onMarkNotificationRead={(id) =>
-          setMiniAppNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
-        }
+        onMarkNotificationRead={markNotificationRead}
         inquiries={inquiries}
         onApproveQuote={handleApproveProforma}
         onCustomerSendMessage={handleCustomerSendMessage}
@@ -1107,9 +1048,7 @@ export default function App() {
             currentCustomer={currentCustomer}
             onSubmitInquiry={handleSubmitInquiry}
             notifications={miniAppNotifications}
-            onMarkNotificationRead={(id) =>
-              setMiniAppNotifications((prev) => prev.map((n) => (n.id === id ? { ...n, read: true } : n)))
-            }
+            onMarkNotificationRead={markNotificationRead}
             inquiries={inquiries}
             onApproveQuote={handleApproveProforma}
             onCustomerSendMessage={handleCustomerSendMessage}
@@ -1133,22 +1072,18 @@ export default function App() {
         {activeTab === 'admin' && (
           <AdminPanelTab
             customers={customers}
-            onApproveCustomer={handleApproveCustomer}
-            onRejectCustomer={handleRejectCustomer}
             inquiries={inquiries}
             onReplyToInquiry={handleReplyToInquiry}
+            onRefresh={refreshCrm}
           />
         )}
 
         {activeTab === 'portal' && (
           <CustomerPortalTab
-            currentCustomer={currentCustomer}
-            onSwitchCustomer={setCurrentCustomer}
-            allCustomers={customers}
+            customers={customers}
             inquiries={inquiries}
-            onCustomerSendMessage={handleCustomerSendMessage}
-            onApproveProforma={handleApproveProforma}
-            onRegisterCustomer={handleRegisterCustomer}
+            onRefresh={refreshCrm}
+            onGoToInquiries={() => setActiveTab('admin')}
           />
         )}
 

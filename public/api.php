@@ -1165,6 +1165,101 @@ function is_admin_request()
     return strlen($key) >= 16 && hash_equals($key, header_val('X-Admin-Key'));
 }
 
+/* ---------------- استعلام‌ها: ساختار یکپارچه بین مینی‌اپ و پنل ---------------- */
+function inq_statuses()
+{
+    return ['pending_review', 'quoted', 'approved_by_client', 'procuring', 'rejected'];
+}
+
+function inq_status_label($st)
+{
+    $m = ['pending_review' => 'در انتظار بررسی', 'quoted' => 'پیش‌فاکتور صادر شد', 'approved_by_client' => 'تایید نهایی مشتری', 'procuring' => 'در حال تامین و حمل', 'rejected' => 'رد شده'];
+    return isset($m[$st]) ? $m[$st] : $st;
+}
+
+/* سازگاری با رکوردهای قدیمی (message / replies / quantity) */
+function norm_inquiry($q)
+{
+    if (!is_array($q)) {
+        return null;
+    }
+    $st = isset($q['status']) ? $q['status'] : 'pending_review';
+    if ($st === 'new') { $st = 'pending_review'; }
+    if ($st === 'answered') { $st = 'quoted'; }
+    if (!in_array($st, inq_statuses(), true)) { $st = 'pending_review'; }
+    $msgs = [];
+    if (isset($q['messages']) && is_array($q['messages'])) {
+        $msgs = $q['messages'];
+    } else {
+        if (!empty($q['message'])) {
+            $msgs[] = ['id' => 'm0', 'sender' => 'customer', 'senderName' => isset($q['customerName']) ? $q['customerName'] : 'مشتری', 'text' => $q['message'], 'at' => isset($q['createdAt']) ? $q['createdAt'] : date('c')];
+        }
+        foreach ((array)(isset($q['replies']) ? $q['replies'] : []) as $i => $r) {
+            if (is_array($r)) {
+                $msgs[] = ['id' => 'r' . $i, 'sender' => (isset($r['by']) && $r['by'] === 'admin') ? 'admin' : 'customer', 'senderName' => (isset($r['by']) && $r['by'] === 'admin') ? 'مدیریت بازرگانی' : 'مشتری', 'text' => isset($r['text']) ? $r['text'] : '', 'at' => isset($r['at']) ? $r['at'] : date('c')];
+            }
+        }
+    }
+    $qty = (int)(isset($q['requestedQuantity']) ? $q['requestedQuantity'] : (isset($q['quantity']) ? $q['quantity'] : 0));
+    $unit = (int)(isset($q['unitPriceToman']) ? $q['unitPriceToman'] : 0);
+    return [
+        'id'               => isset($q['id']) ? $q['id'] : '',
+        'telegramUserId'   => (int)(isset($q['telegramUserId']) ? $q['telegramUserId'] : 0),
+        'customerId'       => (string)(isset($q['telegramUserId']) ? $q['telegramUserId'] : ''),
+        'customerName'     => isset($q['customerName']) ? $q['customerName'] : '',
+        'customerTelegram' => isset($q['username']) ? $q['username'] : (isset($q['customerTelegram']) ? $q['customerTelegram'] : ''),
+        'customerPhone'    => isset($q['phone']) ? $q['phone'] : (isset($q['customerPhone']) ? $q['customerPhone'] : ''),
+        'companyName'      => isset($q['companyName']) ? $q['companyName'] : '',
+        'productId'        => isset($q['productId']) ? $q['productId'] : '',
+        'productTitle'     => isset($q['productTitle']) ? $q['productTitle'] : '',
+        'productImage'     => isset($q['productImage']) ? $q['productImage'] : '',
+        'requestedQuantity'=> $qty,
+        'unitPriceToman'   => $unit,
+        'totalPriceToman'  => $unit * $qty,
+        'unitPriceUsd'     => isset($q['unitPriceUsd']) ? (float)$q['unitPriceUsd'] : 0,
+        'status'           => $st,
+        'createdAt'        => isset($q['createdAt']) ? $q['createdAt'] : '',
+        'updatedAt'        => isset($q['updatedAt']) ? $q['updatedAt'] : (isset($q['createdAt']) ? $q['createdAt'] : ''),
+        'messages'         => array_map(function ($m) {
+            return ['id' => isset($m['id']) ? $m['id'] : '', 'sender' => (isset($m['sender']) && $m['sender'] === 'admin') ? 'admin' : 'customer',
+                    'senderName' => isset($m['senderName']) ? $m['senderName'] : '', 'text' => isset($m['text']) ? $m['text'] : '', 'at' => isset($m['at']) ? $m['at'] : ''];
+        }, array_values(array_filter($msgs, 'is_array'))),
+    ];
+}
+
+function notify_admin_text($text)
+{
+    $adminChat = secret('admin_chat_id');
+    if ($adminChat !== '') {
+        tg_call('sendMessage', ['chat_id' => $adminChat, 'text' => $text]);
+    }
+}
+
+/* مشتری فقط به استعلام خودش دسترسی دارد؛ برمی‌گرداند [رکورد خام|null] پس از اعمال $fn */
+function inquiry_update_own($tgId, $inqId, $fn)
+{
+    global $CRM_FILE;
+    return with_lock('crm', function () use ($CRM_FILE, $tgId, $inqId, $fn) {
+        $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
+        if (!isset($crm['inquiries']) || !is_array($crm['inquiries'])) {
+            return null;
+        }
+        foreach ($crm['inquiries'] as $i => $q) {
+            if (is_array($q) && isset($q['id']) && $q['id'] === $inqId && (int)(isset($q['telegramUserId']) ? $q['telegramUserId'] : 0) === (int)$tgId) {
+                $n = norm_inquiry($q);
+                $res = $fn($q, $n);
+                if ($res === false) {
+                    return ['__denied' => true, 'status' => $n['status']];
+                }
+                $crm['inquiries'][$i] = $res;
+                write_json($CRM_FILE, $crm);
+                return $res;
+            }
+        }
+        return null;
+    });
+}
+
 function customer_status_by_id($tgId)
 {
     global $CRM_FILE;
@@ -1423,87 +1518,146 @@ if ($action === 'image_proxy') {
 }
 /* ---------------- Customer endpoints ---------------- */
 if ($action === 'submit_inquiry' && $method === 'POST') {
-    rate_limit('inquiry', 10, 3600);
+    rate_limit('inquiry', 20, 3600);
     $user = verify_init_data(isset($body['initData']) ? $body['initData'] : '');
     if (!$user) {
         fail('Telegram authentication failed', 401);
     }
-    $message = clean(isset($body['message']) ? $body['message'] : '', 1500);
-    $productTitle = clean(isset($body['productTitle']) ? $body['productTitle'] : '', 300);
-    if ($message === '' && $productTitle === '') {
-        fail('Empty inquiry', 422);
+    $adminChatId = secret('admin_chat_id');
+    $isAdminUser = $adminChatId !== '' && (string)$user['id'] === (string)$adminChatId;
+    if (!$isAdminUser && customer_status_by_id($user['id']) !== 'approved') {
+        fail('ثبت استعلام فقط برای همکاران تاییدشده فعال است. ابتدا احراز هویت را تکمیل کنید.', 403);
     }
+    $message = clean(isset($body['message']) ? $body['message'] : '', 1500);
+    $productId = clean(isset($body['productId']) ? $body['productId'] : '', 100);
+    $qty = max(1, (int)(isset($body['quantity']) ? $body['quantity'] : 1));
+    $prod = null;
+    foreach ((array)read_json($CATALOG_FILE, []) as $pp) {
+        if (is_array($pp) && isset($pp['id']) && $pp['id'] === $productId) { $prod = $pp; break; }
+    }
+    if (!$prod) {
+        fail('محصول پیدا نشد', 404);
+    }
+    /* قیمت از روی پله‌های قیمتی کاتالوگ در سرور محاسبه می‌شود (نه از سمت کاربر) */
+    $tiers = isset($prod['tieredPricing']) && is_array($prod['tieredPricing']) ? $prod['tieredPricing'] : [];
+    $m = null;
+    foreach ($tiers as $t) {
+        if (is_array($t) && isset($t['minQuantity']) && $qty >= (int)$t['minQuantity']) { $m = $t; }
+    }
+    if (!$m && $tiers) { $m = $tiers[0]; }
+    $unitToman = $m && isset($m['calculatedPriceToman']) ? (int)$m['calculatedPriceToman'] : 0;
+    $unitUsd = $m && isset($m['priceUsd']) ? (float)$m['priceUsd'] : 0;
+    $fullName = clean(trim((isset($user['first_name']) ? $user['first_name'] : '') . ' ' . (isset($user['last_name']) ? $user['last_name'] : '')), 120);
+    $now = date('c');
     $inq = [
-        'id'             => 'INQ-' . time() . '-' . mt_rand(1000, 9999),
-        'createdAt'      => date('c'),
-        'status'         => 'new',
+        'id'             => 'INQ-' . date('ymd') . '-' . strtoupper(bin2hex(random_bytes(2))),
+        'createdAt'      => $now,
+        'updatedAt'      => $now,
+        'status'         => 'pending_review',
         'telegramUserId' => (int)$user['id'],
-        'customerName'   => clean(trim((isset($user['first_name']) ? $user['first_name'] : '') . ' ' . (isset($user['last_name']) ? $user['last_name'] : '')), 120),
+        'customerName'   => $fullName,
         'username'       => clean(isset($user['username']) ? $user['username'] : '', 60),
-        'phone'          => clean(isset($body['phone']) ? $body['phone'] : '', 30),
-        'productId'      => clean(isset($body['productId']) ? $body['productId'] : '', 100),
-        'productTitle'   => $productTitle,
-        'quantity'       => (int)(isset($body['quantity']) ? $body['quantity'] : 0),
-        'message'        => $message,
-        'replies'        => [],
+        'phone'          => '',
+        'companyName'    => '',
+        'productId'      => $productId,
+        'productTitle'   => clean(isset($prod['faTitle']) ? $prod['faTitle'] : '', 300),
+        'productImage'   => isset($prod['mainImage']) ? (string)$prod['mainImage'] : '',
+        'quantity'       => $qty,
+        'unitPriceToman' => $unitToman,
+        'unitPriceUsd'   => $unitUsd,
+        'messages'       => [],
     ];
-    with_lock('crm', function () use ($CRM_FILE, $inq) {
+    if ($message !== '') {
+        $inq['messages'][] = ['id' => 'm' . bin2hex(random_bytes(3)), 'sender' => 'customer', 'senderName' => $fullName, 'text' => $message, 'at' => $now];
+    }
+    with_lock('crm', function () use ($CRM_FILE, &$inq) {
         $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
         if (!isset($crm['inquiries']) || !is_array($crm['inquiries'])) {
             $crm['inquiries'] = [];
         }
-        if (!isset($crm['customers']) || !is_array($crm['customers'])) {
-            $crm['customers'] = [];
-        }
-        $found = false;
-        foreach ($crm['customers'] as &$c) {
-            if (isset($c['telegramUserId']) && (int)$c['telegramUserId'] === $inq['telegramUserId']) {
-                $found = true;
-                if ($inq['phone'] !== '') {
-                    $c['phone'] = $inq['phone'];
-                }
+        foreach ((array)(isset($crm['customers']) ? $crm['customers'] : []) as $c) {
+            if (is_array($c) && isset($c['telegramUserId']) && (int)$c['telegramUserId'] === $inq['telegramUserId']) {
+                $inq['phone'] = isset($c['phone']) ? $c['phone'] : '';
+                $inq['companyName'] = isset($c['companyName']) ? $c['companyName'] : '';
+                if (!empty($c['name'])) { $inq['customerName'] = $c['name']; }
                 break;
             }
-        }
-        unset($c);
-        if (!$found) {
-            $crm['customers'][] = [
-                'telegramUserId' => $inq['telegramUserId'],
-                'name'           => $inq['customerName'],
-                'username'       => $inq['username'],
-                'phone'          => $inq['phone'],
-                'createdAt'      => date('c'),
-            ];
         }
         array_unshift($crm['inquiries'], $inq);
         write_json($CRM_FILE, $crm);
     });
-    $adminChat = secret('admin_chat_id');
-    if ($adminChat !== '') {
-        $txt = "📩 استعلام جدید " . $inq['id'] . "\n"
-             . "مشتری: " . $inq['customerName'] . ($inq['username'] ? ' (@' . $inq['username'] . ')' : '') . "\n"
-             . "محصول: " . $inq['productTitle'] . "\n"
-             . "تعداد: " . $inq['quantity'] . "\n"
-             . ($inq['message'] !== '' ? "پیام: " . $inq['message'] : '');
-        tg_call('sendMessage', ['chat_id' => $adminChat, 'text' => $txt]);
-    }
+    notify_admin_text("📩 استعلام جدید " . $inq['id'] . "\n"
+        . "مشتری: " . $inq['customerName'] . ($inq['companyName'] !== '' ? ' — ' . $inq['companyName'] : '') . ($inq['username'] ? ' (@' . $inq['username'] . ')' : '') . "\n"
+        . ($inq['phone'] !== '' ? "تلفن: " . $inq['phone'] . "\n" : '')
+        . "محصول: " . $inq['productTitle'] . "\n"
+        . "تعداد: " . $qty . ($unitToman ? "\nقیمت واحد (پله‌ی مربوطه): " . number_format($unitToman) . " تومان" : '')
+        . ($message !== '' ? "\nپیام: " . $message : '')
+        . "\nپاسخ: پنل ادمین ← استعلام‌ها");
     out(['success' => true, 'id' => $inq['id']]);
 }
 
-if ($action === 'my_inquiries' && $method === 'POST') {
-    rate_limit('myinq', 120, 3600);
-    $user = verify_init_data(isset($body['initData']) ? $body['initData'] : '');
+if ($action === 'my_inquiries' && ($method === 'POST' || $method === 'GET')) {
+    rate_limit('myinq', 300, 3600);
+    $user = verify_init_data($method === 'POST' && isset($body['initData']) ? $body['initData'] : request_init_data());
     if (!$user) {
         fail('Telegram authentication failed', 401);
     }
     $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
     $mine = [];
     foreach ((array)(isset($crm['inquiries']) ? $crm['inquiries'] : []) as $q) {
-        if (isset($q['telegramUserId']) && (int)$q['telegramUserId'] === (int)$user['id']) {
-            $mine[] = $q;
+        if (is_array($q) && isset($q['telegramUserId']) && (int)$q['telegramUserId'] === (int)$user['id']) {
+            $mine[] = norm_inquiry($q);
         }
     }
-    out(['success' => true, 'inquiries' => $mine]);
+    out(['success' => true, 'inquiries' => $mine, 'customerStatus' => customer_status_by_id($user['id'])]);
+}
+
+/* پیام تکمیلی مشتری روی یک استعلام */
+if ($action === 'inquiry_message' && $method === 'POST') {
+    rate_limit('inqmsg', 60, 3600);
+    $user = verify_init_data(isset($body['initData']) ? $body['initData'] : '');
+    if (!$user) {
+        fail('Telegram authentication failed', 401);
+    }
+    $text = clean(isset($body['text']) ? $body['text'] : '', 1500);
+    $iid = clean(isset($body['inquiryId']) ? $body['inquiryId'] : '', 60);
+    if ($text === '' || $iid === '') {
+        fail('متن پیام خالی است', 422);
+    }
+    $name = clean(trim((isset($user['first_name']) ? $user['first_name'] : '') . ' ' . (isset($user['last_name']) ? $user['last_name'] : '')), 120);
+    $res = inquiry_update_own($user['id'], $iid, function ($q, $n) use ($text, $name) {
+        $q['messages'] = $n['messages'];
+        $q['messages'][] = ['id' => 'm' . bin2hex(random_bytes(3)), 'sender' => 'customer', 'senderName' => $name, 'text' => $text, 'at' => date('c')];
+        if ($n['status'] === 'quoted') { $q['status'] = 'pending_review'; } else { $q['status'] = $n['status']; }
+        $q['updatedAt'] = date('c');
+        return $q;
+    });
+    if (!$res) { fail('استعلام پیدا نشد', 404); }
+    notify_admin_text("💬 پیام جدید مشتری روی " . $iid . "\n" . $name . ((!empty($user['username'])) ? ' (@' . $user['username'] . ')' : '') . ":\n" . $text);
+    out(['success' => true]);
+}
+
+/* تایید پیش‌فاکتور توسط مشتری */
+if ($action === 'inquiry_confirm' && $method === 'POST') {
+    rate_limit('inqconf', 30, 3600);
+    $user = verify_init_data(isset($body['initData']) ? $body['initData'] : '');
+    if (!$user) {
+        fail('Telegram authentication failed', 401);
+    }
+    $iid = clean(isset($body['inquiryId']) ? $body['inquiryId'] : '', 60);
+    $name = clean(trim((isset($user['first_name']) ? $user['first_name'] : '') . ' ' . (isset($user['last_name']) ? $user['last_name'] : '')), 120);
+    $res = inquiry_update_own($user['id'], $iid, function ($q, $n) use ($name) {
+        if ($n['status'] !== 'quoted') { return false; }
+        $q['messages'] = $n['messages'];
+        $q['messages'][] = ['id' => 'm' . bin2hex(random_bytes(3)), 'sender' => 'customer', 'senderName' => $name, 'text' => 'پیش‌فاکتور را تایید کردم.', 'at' => date('c')];
+        $q['status'] = 'approved_by_client';
+        $q['updatedAt'] = date('c');
+        return $q;
+    });
+    if (!$res) { fail('استعلام پیدا نشد', 404); }
+    if (isset($res['__denied'])) { fail('این استعلام هنوز پیش‌فاکتور ندارد', 409); }
+    notify_admin_text("✅ پیش‌فاکتور " . $iid . " توسط " . $name . " تایید شد.\nمحصول: " . (isset($res['productTitle']) ? $res['productTitle'] : '') . "\nبرای ادامه: پنل ادمین ← استعلام‌ها");
+    out(['success' => true]);
 }
 
 /* ---------------- Ingest ---------------- */
@@ -2542,7 +2696,7 @@ if ($action === 'scrape_relay') {
 /* ---------------- Admin only ---------------- */
 $adminActions = [
     'get_products_admin', 'save_products', 'upload_image', 'cache_catalog_images',
-    'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry',
+    'refresh_rates', 'save_rates', 'get_settings', 'save_settings', 'get_crm', 'save_crm', 'reply_inquiry', 'list_inquiries',
     'telegram_verify', 'verify_telegram', 'telegram_broadcast', 'broadcast_telegram', 'competitor_analysis',
     'channel_post_pending', 'ingest_batch', 'normalize_catalog', 'attach_images', 'backup_catalog', 'dedupe_catalog',
     'list_customers', 'set_customer_status',
@@ -2883,25 +3037,44 @@ if ($action === 'save_crm' && $method === 'POST') {
     out(['success' => true, 'saved_at' => date('c')]);
 }
 
+if ($action === 'list_inquiries') {
+    $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
+    $list = [];
+    foreach ((array)(isset($crm['inquiries']) ? $crm['inquiries'] : []) as $q) {
+        $n = norm_inquiry($q);
+        if ($n && $n['id'] !== '') { $list[] = $n; }
+    }
+    out(['success' => true, 'inquiries' => $list]);
+}
+
 if ($action === 'reply_inquiry' && $method === 'POST') {
     $id = clean(isset($body['inquiryId']) ? $body['inquiryId'] : '', 100);
     $text = clean(isset($body['text']) ? $body['text'] : '', 3000);
-    if ($id === '' || $text === '') {
+    $newStatus = isset($body['status']) ? clean($body['status'], 30) : '';
+    $newUnit = isset($body['unitPriceToman']) && $body['unitPriceToman'] !== '' ? max(0, (int)$body['unitPriceToman']) : null;
+    if ($newStatus !== '' && !in_array($newStatus, inq_statuses(), true)) {
+        fail('وضعیت نامعتبر است', 422);
+    }
+    if ($id === '' || ($text === '' && $newStatus === '' && $newUnit === null)) {
         fail('inquiryId and text are required', 422);
     }
-    $found = with_lock('crm', function () use ($CRM_FILE, $id, $text, $body) {
+    $found = with_lock('crm', function () use ($CRM_FILE, $id, $text, $newStatus, $newUnit) {
         $crm = read_json($CRM_FILE, ['customers' => [], 'inquiries' => []]);
-        foreach ($crm['inquiries'] as &$q) {
-            if (isset($q['id']) && $q['id'] === $id) {
-                if (!isset($q['replies']) || !is_array($q['replies'])) {
-                    $q['replies'] = [];
+        foreach ((array)$crm['inquiries'] as $i => $q) {
+            if (is_array($q) && isset($q['id']) && $q['id'] === $id) {
+                $n = norm_inquiry($q);
+                $q['messages'] = $n['messages'];
+                $q['quantity'] = $n['requestedQuantity'];
+                $q['unitPriceToman'] = $newUnit !== null ? $newUnit : $n['unitPriceToman'];
+                $q['status'] = $newStatus !== '' ? $newStatus : ($n['status'] === 'pending_review' ? 'quoted' : $n['status']);
+                if ($text !== '') {
+                    $q['messages'][] = ['id' => 'm' . bin2hex(random_bytes(3)), 'sender' => 'admin', 'senderName' => 'مدیریت بازرگانی', 'text' => $text, 'at' => date('c')];
                 }
-                $q['replies'][] = ['by' => 'admin', 'text' => $text, 'at' => date('c')];
-                $q['status'] = isset($body['status']) ? clean($body['status'], 20) : 'answered';
-                $copy = $q;
-                unset($q);
+                $q['updatedAt'] = date('c');
+                unset($q['replies'], $q['message']);
+                $crm['inquiries'][$i] = $q;
                 write_json($CRM_FILE, $crm);
-                return $copy;
+                return norm_inquiry($q);
             }
         }
         return null;
@@ -2911,13 +3084,16 @@ if ($action === 'reply_inquiry' && $method === 'POST') {
     }
     $notified = false;
     if (!empty($found['telegramUserId'])) {
-        $r = tg_call('sendMessage', [
-            'chat_id' => (int)$found['telegramUserId'],
-            'text' => "پاسخ به استعلام شما (" . $found['id'] . "):\n\n" . $text,
-        ]);
+        $msg = "📋 پاسخ مدیریت به استعلام " . $found['id'] . "\nمحصول: " . $found['productTitle'] . "\n";
+        if ($text !== '') { $msg .= "\n" . $text . "\n"; }
+        if ($found['unitPriceToman'] > 0) {
+            $msg .= "\nقیمت واحد: " . number_format($found['unitPriceToman']) . " تومان\nتعداد: " . $found['requestedQuantity'] . " عدد\nمبلغ کل: " . number_format($found['totalPriceToman']) . " تومان\n";
+        }
+        $msg .= "\nوضعیت: " . inq_status_label($found['status']) . "\nبرای تایید یا پیگیری، مینی‌اپ را باز کنید.";
+        $r = tg_call('sendMessage', ['chat_id' => (int)$found['telegramUserId'], 'text' => $msg]);
         $notified = !empty($r['ok']);
     }
-    out(['success' => true, 'customer_notified' => $notified]);
+    out(['success' => true, 'customer_notified' => $notified, 'inquiry' => $found]);
 }
 
 if ($action === 'telegram_verify' || $action === 'verify_telegram') {

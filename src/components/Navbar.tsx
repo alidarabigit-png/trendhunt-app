@@ -90,10 +90,10 @@ export const Navbar: React.FC<NavbarProps> = ({
     },
     {
       id: 'portal',
-      label: 'پورتال اختصاصی همکار',
+      label: 'پرونده‌ی همکاران',
       icon: UserCheck,
-      badge: currentCustomer?.status === 'approved' ? 'تایید شده' : 'در انتظار',
-      badgeColor: currentCustomer?.status === 'approved' ? 'bg-emerald-500 text-white' : 'bg-amber-400 text-slate-950',
+      badge: pendingCustomersCount > 0 ? `${pendingCustomersCount} در انتظار` : undefined,
+      badgeColor: 'bg-amber-400 text-slate-950',
     },
   ];
 

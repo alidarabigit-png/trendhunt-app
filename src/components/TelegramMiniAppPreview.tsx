@@ -44,7 +44,7 @@ interface TelegramMiniAppPreviewProps {
   onSelectProduct: (p: ProductItem) => void;
   currencyRates: CurrencyRates;
   currentCustomer: CustomerUser;
-  onSubmitInquiry: (productId: string, quantity: number, notes?: string) => void;
+  onSubmitInquiry: (productId: string, quantity: number, notes?: string) => Promise<{ ok: boolean; error?: string }> | void;
   notifications?: MiniAppNotification[];
   onMarkNotificationRead?: (notifId: string) => void;
   inquiries?: CustomerInquiry[];
@@ -82,6 +82,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
   const [isMiniAppDrawerOpen, setIsMiniAppDrawerOpen] = useState(false);
   const [isNotificationsModalOpen, setIsNotificationsModalOpen] = useState(false);
   const [selectedInquiryDetail, setSelectedInquiryDetail] = useState<CustomerInquiry | null>(null);
+  // با هر بروزرسانی از سرور، گفتگوی بازشده هم تازه می‌شود
+  React.useEffect(() => {
+    setSelectedInquiryDetail((prev) => (prev ? inquiries.find((i) => i.id === prev.id) || prev : prev));
+  }, [inquiries]);
   const [customerChatReplyText, setCustomerChatReplyText] = useState('');
   const [activePushToast, setActivePushToast] = useState<MiniAppNotification | null>(null);
   const [activeProductModal, setActiveProductModal] = useState<ProductItem | null>(
@@ -216,14 +220,23 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
   const currentPricing = currentProduct ? getCalculatedPrice(currentProduct, orderQuantity) : null;
 
-  const handleSendInquiry = () => {
-    if (!currentProduct) return;
+  const [inquiryError, setInquiryError] = useState('');
+  const [inquiryBusy, setInquiryBusy] = useState(false);
+  const handleSendInquiry = async () => {
+    if (!currentProduct || inquiryBusy) return;
     if (!previewAsApproved) {
       // هنوز احراز نشده: فرم مشخصات مشتری را باز کن
       window.dispatchEvent(new Event('nfs-open-registration'));
       return;
     }
-    onSubmitInquiry(currentProduct.id, orderQuantity, customerInquiryNotes);
+    setInquiryError('');
+    setInquiryBusy(true);
+    const res = await onSubmitInquiry(currentProduct.id, orderQuantity, customerInquiryNotes);
+    setInquiryBusy(false);
+    if (res && (res as any).ok === false) {
+      setInquiryError((res as any).error || 'ثبت استعلام ناموفق بود');
+      return;
+    }
     setInquirySuccess(true);
     setCustomerInquiryNotes('');
     setTimeout(() => setInquirySuccess(false), 3500);
@@ -501,10 +514,31 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     ) : (
                       // Notifications List
                       <div className="space-y-2">
+                        {inquiries.length > 0 && (
+                          <div className="space-y-1.5 pb-2">
+                            <div className="text-[10px] font-bold text-[color:var(--mx-muted)]">استعلام‌های من ({inquiries.length})</div>
+                            {inquiries.map((q) => (
+                              <button
+                                key={q.id}
+                                onClick={() => setSelectedInquiryDetail(q)}
+                                className="w-full text-right p-2.5 rounded-[var(--mx-radius)] border border-[color:var(--mx-border)] bg-[var(--mx-card)] flex items-center gap-2.5 cursor-pointer"
+                              >
+                                {q.productImage ? <img src={q.productImage} alt="" className="w-10 h-10 rounded-lg object-cover shrink-0" /> : <div className="w-10 h-10 rounded-lg bg-[#EEF1F5] shrink-0" />}
+                                <div className="flex-1 min-w-0">
+                                  <div className="text-[11px] font-bold truncate">{q.productTitle}</div>
+                                  <div className="text-[10px] text-[color:var(--mx-muted)]">{q.requestedQuantity} عدد · {q.updatedAt}</div>
+                                </div>
+                                <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold shrink-0 ${q.status === 'quoted' ? 'bg-[#E7F6EC] text-[#166534]' : q.status === 'rejected' ? 'bg-[#FDECEC] text-[#9B1C1C]' : 'bg-[#FFF4DB] text-[#92580A]'}`}>
+                                  {q.status === 'pending_review' ? 'در انتظار پاسخ' : q.status === 'quoted' ? 'پیش‌فاکتور آماده' : q.status === 'approved_by_client' ? 'تایید شده' : q.status === 'procuring' ? 'در حال تامین' : 'رد شده'}
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        )}
                         {notifications.length === 0 ? (
                           <div className="text-center py-8 text-[color:var(--mx-muted)] space-y-1">
                             <Bell className="w-8 h-8 mx-auto opacity-30" />
-                            <p className="text-xs">هیچ اعلان یا پاسخی ثبت نشده است.</p>
+                            <p className="text-xs">{inquiries.length > 0 ? 'هنوز پاسخی از مدیریت دریافت نشده است.' : 'هیچ اعلان یا استعلامی ثبت نشده است.'}</p>
                           </div>
                         ) : (
                           notifications.map((notif) => (
@@ -1231,6 +1265,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             {/* Telegram WebApp Fixed MainButton at Bottom */}
             <div key={miniAppView} className={`${miniAppView === 'detail' ? 'mx-bar-up' : ''} p-3 border-t ${isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)]'}`}>
               {miniAppView === 'detail' ? (
+                <>
+                {inquiryError && <div className="text-[10px] text-[#A91D2E] pb-2 text-center leading-relaxed">{inquiryError}</div>}
                 <div className="flex items-center gap-3">
                   {previewAsApproved && currentPricing && (
                     <div className="shrink-0 text-right leading-tight">
@@ -1244,10 +1280,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   onClick={handleSendInquiry}
                   className="nfs-btn-primary flex-1 py-3 rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1.5 transition active:scale-95 cursor-pointer"
                 >
-                  {inquirySuccess ? (
+                  {inquiryBusy ? (
+                    <span>در حال ارسال…</span>
+                  ) : inquirySuccess ? (
                     <>
                       <Check className="w-4 h-4 text-[color:var(--mx-ok)]" />
-                      <span>استعلام با موفقیت ثبت شد و به پنل ادمین ارسال گردید!</span>
+                      <span>استعلام ثبت شد؛ پاسخ را در همین مینی‌اپ و تلگرام دریافت می‌کنید</span>
                     </>
                   ) : (
                     <>
@@ -1261,6 +1299,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   )}
                 </button>
                 </div>
+                </>
               ) : (
                 <div className="flex items-center justify-between text-xs px-2 py-1 opacity-80">
                   <span className="text-[10px]">روی هر کالا بزنید تا صفحه اختصاصی مشخصات و استعلام باز شود</span>
