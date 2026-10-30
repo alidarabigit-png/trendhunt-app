@@ -261,6 +261,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
     background: t.pageBg,
   } as React.CSSProperties;
 
+  // در حالت واقعی (تمام‌صفحه) لایه‌های روی صفحه باید به نمای دید چسبیده باشند نه به کل ارتفاع صفحه
+  const ov = isStandalone ? 'fixed' : 'absolute';
   const renderScreenContent = () => (
     <div
       data-phone-dark={isDarkMode ? 'true' : 'false'}
@@ -344,7 +346,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   if (onMarkNotificationRead) onMarkNotificationRead(activePushToast.id);
                   setActivePushToast(null);
                 }}
-                className="absolute top-16 left-3 right-3 z-45 bg-[var(--mx-card)] border-2 border-[color:var(--mx-accent)] text-[color:var(--mx-text)] p-3 rounded-[var(--mx-radius)] shadow-2xl backdrop-blur-md cursor-pointer animate-bounce flex items-start gap-2.5"
+                className={`${ov} top-16 left-3 right-3 z-[60] max-w-lg mx-auto bg-[var(--mx-card)] border-2 border-[color:var(--mx-accent)] text-[color:var(--mx-text)] p-3 rounded-[var(--mx-radius)] shadow-2xl backdrop-blur-md cursor-pointer animate-bounce flex items-start gap-2.5`}
               >
                 <div className="w-8 h-8 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] flex items-center justify-center shrink-0 shadow-md shadow-black/30">
                   <BellRing className="w-4 h-4 animate-pulse" />
@@ -380,9 +382,10 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
 
             {/* Modal: Notifications & Inquiries Center */}
             {isNotificationsModalOpen && (
-              <div className="absolute inset-0 z-50 bg-black/80 backdrop-blur-xs flex flex-col justify-end">
+              <div className={`${ov} inset-0 z-50 bg-black/80 flex flex-col justify-end`} onClick={() => { setIsNotificationsModalOpen(false); setSelectedInquiryDetail(null); }}>
                 <div
-                  className={`w-full max-h-[85%] rounded-t-3xl border-t flex flex-col shadow-2xl overflow-hidden ${
+                  onClick={(e) => e.stopPropagation()}
+                  className={`w-full max-w-lg mx-auto max-h-[85vh] rounded-t-3xl border-t flex flex-col shadow-2xl overflow-hidden ${
                     isDarkMode ? 'bg-[var(--mx-page)] border-[color:var(--mx-border)] text-[color:var(--mx-text)]' : 'bg-[var(--mx-card)] border-[color:var(--mx-border)] text-[color:var(--mx-text)]'
                   }`}
                 >
@@ -581,12 +584,12 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
             {/* Mini App Slide-Out Drawer (منوی کشویی سرسره‌ای از سمت راست داخل مینی‌آپ) */}
             {/* منوی کشویی رو به پایین (Slide-Down Dropdown) */}
             {isMiniAppDrawerOpen && (
-              <div onClick={() => setIsMiniAppDrawerOpen(false)} onTouchStart={() => setIsMiniAppDrawerOpen(false)} className="absolute inset-0 z-40 bg-black/20" />
+              <div onClick={() => setIsMiniAppDrawerOpen(false)} onTouchStart={() => setIsMiniAppDrawerOpen(false)} className={`${ov} inset-0 z-40 bg-black/20`} />
             )}
             {isMiniAppDrawerOpen && (
             <aside
               onClick={(e) => e.stopPropagation()}
-              className="absolute top-[68px] left-3 right-3 z-50 max-h-[72%] rounded-2xl bg-[var(--mx-card)] text-[color:var(--mx-text)] border border-[color:var(--mx-border)] shadow-lg flex flex-col animate-[slideDown_0.22s_ease-out]"
+              className={`${ov} top-[68px] left-3 right-3 z-50 max-w-lg mx-auto max-h-[72vh] rounded-2xl bg-[var(--mx-card)] text-[color:var(--mx-text)] border border-[color:var(--mx-border)] shadow-lg flex flex-col animate-[slideDown_0.22s_ease-out]`}
             >
               {/* Drawer Scrollable Content */}
               <div className="flex-1 overflow-y-auto p-3.5 space-y-3.5 no-scrollbar text-xs">
