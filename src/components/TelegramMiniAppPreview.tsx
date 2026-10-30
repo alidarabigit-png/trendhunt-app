@@ -346,26 +346,26 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                   if (onMarkNotificationRead) onMarkNotificationRead(activePushToast.id);
                   setActivePushToast(null);
                 }}
-                className={`${ov} top-16 left-3 right-3 z-[60] max-w-lg mx-auto bg-[var(--mx-card)] border-2 border-[color:var(--mx-accent)] text-[color:var(--mx-text)] p-3 rounded-[var(--mx-radius)] shadow-2xl backdrop-blur-md cursor-pointer animate-bounce flex items-start gap-2.5`}
+                className={`${ov} top-16 left-3 right-3 z-[60] max-w-lg mx-auto bg-[var(--mx-card)] border-2 border-[color:var(--mx-accent)] text-[color:var(--mx-text)] p-4 rounded-[var(--mx-radius)] shadow-2xl backdrop-blur-md cursor-pointer mx-pop flex items-start gap-3.5`}
               >
-                <div className="w-8 h-8 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] flex items-center justify-center shrink-0 shadow-md shadow-black/30">
-                  <BellRing className="w-4 h-4 animate-pulse" />
+                <div className="w-12 h-12 rounded-2xl bg-[#A91D2E] text-white flex items-center justify-center shrink-0 shadow-md shadow-black/30">
+                  <BellRing className="w-6 h-6 animate-pulse" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between">
-                    <span className="font-extrabold text-[11px] text-[color:var(--mx-accent)]">
+                    <span className="font-extrabold text-sm text-[#A91D2E]">
                       {activePushToast.title}
                     </span>
-                    <span className="text-[9px] text-[color:var(--mx-muted)] font-mono">
+                    <span className="text-[10px] text-[color:var(--mx-muted)] font-mono">
                       {activePushToast.timestamp}
                     </span>
                   </div>
-                  <p className="text-[10px] text-[color:var(--mx-body)] line-clamp-2 mt-0.5 leading-snug">
+                  <p className="text-xs text-[color:var(--mx-body)] line-clamp-3 mt-1 leading-relaxed">
                     {activePushToast.message}
                   </p>
-                  <div className="text-[9px] text-[color:var(--mx-price)] font-bold mt-1 flex items-center gap-1">
+                  <div className="text-xs text-[#A91D2E] font-bold mt-2 flex items-center gap-1">
                     <span>مشاهده پیش‌فاکتور و گفتگو</span>
-                    <ChevronLeft className="w-3 h-3" />
+                    <ChevronLeft className="w-4 h-4" />
                   </div>
                 </div>
                 <button
@@ -373,9 +373,9 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     e.stopPropagation();
                     setActivePushToast(null);
                   }}
-                  className="p-1 text-[color:var(--mx-muted)] hover:text-[color:var(--mx-text)]"
+                  className="p-1.5 text-[color:var(--mx-muted)] hover:text-[color:var(--mx-text)]"
                 >
-                  <X className="w-3.5 h-3.5" />
+                  <X className="w-4.5 h-4.5" />
                 </button>
               </div>
             )}
@@ -426,29 +426,33 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                     {selectedInquiryDetail ? (
                       // Single Inquiry Conversation & Quotation View
                       <div className="space-y-3">
-                        <div className="p-3 rounded-[var(--mx-radius)] bg-[color-mix(in_srgb,var(--mx-text)_10%,transparent)] border border-[color:var(--mx-border)] space-y-2">
+                        <div className="p-3 rounded-[var(--mx-radius)] bg-white border border-[#E3E6EC] text-[#0F1115] space-y-2">
                           <div className="flex items-center gap-2.5">
                             <img
-                              src={selectedInquiryDetail.productImage}
+                              src={selectedInquiryDetail.productImage || PLACEHOLDER_IMG}
                               alt={selectedInquiryDetail.productTitle}
                               className="w-12 h-12 rounded-[calc(var(--mx-radius)*0.75)] object-cover"
                             />
                             <div className="flex-1 min-w-0">
-                              <h5 className="font-bold text-xs truncate text-[color:var(--mx-text)]">{selectedInquiryDetail.productTitle}</h5>
-                              <div className="text-[10px] text-[color:var(--mx-muted)]">تیراژ درخواستی: {selectedInquiryDetail.requestedQuantity} عدد</div>
-                              <div className="text-[11px] font-bold text-[color:var(--mx-ok)] font-mono">
-                                مبلغ کل: {selectedInquiryDetail.totalPriceToman.toLocaleString('en-US')} تومان
+                              <h5 className="font-bold text-xs truncate text-[#0F1115]">{selectedInquiryDetail.productTitle}</h5>
+                              <div className="text-[10px] text-[#6B7280]">تیراژ درخواستی: {selectedInquiryDetail.requestedQuantity} عدد</div>
+                              <div className="text-[11px] font-bold text-[#A91D2E]">
+                                {selectedInquiryDetail.totalPriceToman > 0 ? `مبلغ کل: ${selectedInquiryDetail.totalPriceToman.toLocaleString('en-US')} تومان` : 'مبلغ: در انتظار قیمت‌گذاری مدیریت'}
                               </div>
                             </div>
                           </div>
 
                           <div className="pt-2 border-t border-[color:var(--mx-border)] flex items-center justify-between text-[10px]">
-                            <span className="text-[color:var(--mx-muted)]">وضعیت پیش‌فاکتور:</span>
-                            <span className="font-bold text-[color:var(--mx-price)]">
+                            <span className="text-[#6B7280]">وضعیت پیش‌فاکتور:</span>
+                            <span className="font-bold text-[#A91D2E]">
                               {selectedInquiryDetail.status === 'quoted'
                                 ? 'پیش‌فاکتور صادر شد'
                                 : selectedInquiryDetail.status === 'approved_by_client'
                                 ? 'تایید شده توسط همکار'
+                                : selectedInquiryDetail.status === 'procuring'
+                                ? 'در حال تامین و حمل'
+                                : selectedInquiryDetail.status === 'rejected'
+                                ? 'رد شده'
                                 : 'در حال بررسی توسط ادمین'}
                             </span>
                           </div>
@@ -461,8 +465,8 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               key={m.id}
                               className={`p-3 rounded-[var(--mx-radius)] text-xs max-w-[85%] leading-relaxed shadow-sm ${
                                 m.sender === 'admin'
-                                  ? 'bg-[var(--mx-btn)] text-[color:var(--mx-text)] mr-auto'
-                                  : 'bg-[var(--mx-card)] text-[color:var(--mx-text)] border border-[color:var(--mx-border)] ml-auto'
+                                  ? 'bg-[#FBEEF0] text-[#3B0A12] border border-[#E9BCC3] mr-auto'
+                                  : 'bg-white text-[#0F1115] border border-[#E3E6EC] ml-auto'
                               }`}
                             >
                               <div className="font-bold text-[10px] opacity-75 mb-0.5">{m.senderName}:</div>
@@ -494,7 +498,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                                 setCustomerChatReplyText('');
                               }
                             }}
-                            className="p-2 bg-[var(--mx-accent)] text-[color:var(--mx-btn-text)] rounded-[calc(var(--mx-radius)*0.75)]"
+                            className="p-2.5 bg-[#A91D2E] text-white rounded-[calc(var(--mx-radius)*0.75)]"
                           >
                             <Send className="w-3.5 h-3.5" />
                           </button>
@@ -507,7 +511,7 @@ export const TelegramMiniAppPreview: React.FC<TelegramMiniAppPreviewProps> = ({
                               onApproveQuote(selectedInquiryDetail.id);
                               setSelectedInquiryDetail({ ...selectedInquiryDetail, status: 'approved_by_client' });
                             }}
-                            className="w-full py-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[var(--mx-btn)] hover:brightness-110 text-[color:var(--mx-text)] font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-black/30 transition cursor-pointer"
+                            className="w-full py-2.5 rounded-[calc(var(--mx-radius)*0.75)] bg-[#A91D2E] hover:bg-[#871523] text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-black/20 transition cursor-pointer"
                           >
                             <CheckCircle2 className="w-4 h-4" />
                             <span>تایید نهایی پیش‌فاکتور و ارجاع به مرحله تامین</span>
